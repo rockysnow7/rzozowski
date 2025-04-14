@@ -1,4 +1,4 @@
-use rzozowski::{parse, Regex};
+use rzozowski::parse;
 
 #[test]
 fn test_parse_and_matches() {
@@ -8,5 +8,4 @@ fn test_parse_and_matches() {
     assert!(regex.matches("ac"));
     assert!(regex.matches("abc"));
     assert!(regex.matches("abbaccc"));
-    
 }

@@ -326,7 +326,7 @@ where
     })
 }
 
-/// Tries to parse a string into a `Regex` object.
+/// Tries to parse a given string into a `Regex` object.
 pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
     println!("Input:\t{:?}", input);
     let tokens = tokenize_string(input).map_err(|_| "Failed to tokenize input".to_string())?;

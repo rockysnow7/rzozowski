@@ -134,6 +134,7 @@ impl Regex {
         }
     }
 
+    /// If the regex is nullable, return `Regex::Epsilon`, otherwise return `Regex::Empty`.
     pub fn is_nullable(&self) -> Regex {
         if self.is_nullable_() {
             Regex::Epsilon
@@ -142,6 +143,7 @@ impl Regex {
         }
     }
 
+    /// Returns the Brzozowski derivative of the regex with respect to a given character.
     pub fn derivative(&self, c: char) -> Regex {
         match self {
             Regex::Empty | Regex::Epsilon => Regex::Empty,
@@ -210,6 +212,7 @@ impl Regex {
         }.simplify()
     }
 
+    /// Simplifies the regex.
     pub fn simplify(&self) -> Regex {
         match self {
             Regex::Empty => Regex::Empty,
@@ -356,6 +359,7 @@ impl Regex {
         }
     }
 
+    /// Returns true if the regex matches the given string.
     pub fn matches(&self, s: &str) -> bool {
         let mut current = self.clone();
         for c in s.chars() {

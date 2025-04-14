@@ -70,6 +70,7 @@ impl Debug for Count {
     }
 }
 
+/// A regular expression.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Regex {
     Empty,
@@ -353,6 +354,14 @@ impl Regex {
                 Regex::Count(Box::new(inner_simplified), *count)
             },
         }
+    }
+
+    pub fn matches(&self, s: &str) -> bool {
+        let mut current = self.clone();
+        for c in s.chars() {
+            current = current.derivative(c);
+        }
+        current.is_nullable_()
     }
 }
 
@@ -739,5 +748,56 @@ mod tests {
                 Box::new(Regex::ZeroOrMore(Box::new(Regex::Literal('b'))))
             ))
         ));
+    }
+
+    #[test]
+    fn test_matches_literal() {
+        let regex = Regex::Literal('a');
+        assert!(regex.matches("a"));
+        assert!(!regex.matches("b"));
+    }
+
+    #[test]
+    fn test_matches_concat() {
+        let regex = Regex::Concat(
+            Box::new(Regex::Literal('a')),
+            Box::new(Regex::Literal('b'))
+        );
+        assert!(regex.matches("ab"));
+        assert!(!regex.matches("a"));
+        assert!(!regex.matches("b"));
+    }
+
+    #[test]
+    fn test_matches_or() {
+        let regex = Regex::Or(
+            Box::new(Regex::Literal('a')),
+            Box::new(Regex::Literal('b'))
+        );
+        assert!(regex.matches("a"));
+        assert!(regex.matches("b"));
+        assert!(!regex.matches("c"));
+    }
+
+    #[test]
+    fn test_matches_zero_or_more() {
+        let regex = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
+        assert!(regex.matches(""));
+        assert!(regex.matches("a"));
+        assert!(regex.matches("aa"));
+        assert!(!regex.matches("b"));
+    }
+
+    #[test]
+    fn test_matches_complex() {
+        let regex = Regex::Concat(
+            Box::new(Regex::Literal('a')),
+            Box::new(Regex::ZeroOrMore(Box::new(Regex::Literal('b')))
+        )); // ab*
+        assert!(regex.matches("a"));
+        assert!(regex.matches("ab"));
+        assert!(regex.matches("abb"));
+        assert!(!regex.matches("b"));
+        assert!(!regex.matches("aa"));
     }
 }

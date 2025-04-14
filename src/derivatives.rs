@@ -198,8 +198,8 @@ impl Regex {
             },
             Regex::Count(inner, count) => {
                 let new_count = Count {
-                    min: 0.max(count.min - 1),
-                    max: count.max.map(|max| max - 1),
+                    min: count.min.saturating_sub(1),
+                    max: count.max.map(|max| max.saturating_sub(1)),
                 };
 
                 Regex::Concat(
@@ -750,6 +750,7 @@ mod tests {
         ));
     }
 
+    // matches tests
     #[test]
     fn test_matches_literal() {
         let regex = Regex::Literal('a');
@@ -799,5 +800,39 @@ mod tests {
         assert!(regex.matches("abb"));
         assert!(!regex.matches("b"));
         assert!(!regex.matches("aa"));
+    }
+
+    #[test]
+    fn test_matches_count_range() {
+        let regex = Regex::Count(
+            Box::new(Regex::Literal('a')),
+            Count { min: 2, max: Some(3) }
+        );
+        assert!(!regex.matches(""));
+        assert!(!regex.matches("a"));
+        assert!(regex.matches("aa"));
+        assert!(regex.matches("aaa"));
+        assert!(!regex.matches("aaaa"));
+    }
+    
+    #[test]
+    fn test_matches_count_single() {
+        let regex = Regex::Count(
+            Box::new(Regex::Literal('a')),
+            Count { min: 2, max: None }
+        );
+
+        assert!(!regex.matches(""));
+        assert!(!regex.matches("a"));
+        assert!(regex.matches("aa"));
+        assert!(!regex.matches("aaa"));
+    }
+
+    #[test]
+    fn test_matches_class() {
+        let regex = Regex::Class(vec![CharRange::Single('a'), CharRange::Single('b')]);
+        assert!(regex.matches("a"));
+        assert!(regex.matches("b"));
+        assert!(!regex.matches("c"));
     }
 }

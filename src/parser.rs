@@ -75,14 +75,20 @@ fn unescaped_char<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a, Token
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token| matches!(token, Token::Literal(_)))
-        .filter(|token| {
-            let c = token.as_char().unwrap();
-            !NON_CLASS_ESCAPE_CHARS.contains(&c)
-        })
-        .map(|token| {
-            token.as_char().unwrap()
-        })
+    any().filter(|token| {
+        matches!(token, Token::Literal(_)) ||
+        matches!(token, Token::Percent) ||
+        matches!(token, Token::Plus) ||
+        matches!(token, Token::Dot) ||
+        matches!(token, Token::At)
+    })
+    .filter(|token| {
+        let c = token.as_char().unwrap();
+        !NON_CLASS_ESCAPE_CHARS.contains(&c)
+    })
+    .map(|token| {
+        token.as_char().unwrap()
+    })
 }
 
 /// Parses an escaped character (e.g., `\[`).
@@ -133,11 +139,17 @@ fn class_unescaped_char<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a,
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token| matches!(token, Token::Literal(_)))
-        .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char().unwrap()))
-        .map(|token| {
-            token.as_char().unwrap()
-        })
+    any().filter(|token| {
+        matches!(token, Token::Literal(_)) ||
+        matches!(token, Token::Percent) ||
+        matches!(token, Token::Plus) ||
+        matches!(token, Token::Dot) ||
+        matches!(token, Token::At)
+    })
+    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char().unwrap()))
+    .map(|token| {
+        token.as_char().unwrap()
+    })
 }
 
 /// Parses an escaped character that is not a special character sequence (e.g., `\[`, `\]`, `\-`).
@@ -328,9 +340,7 @@ where
 
 /// Tries to parse a given string into a `Regex` object.
 pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
-    println!("Input:\t{:?}", input);
     let tokens = tokenize_string(input).map_err(|_| "Failed to tokenize input".to_string())?;
-    println!("Tokens:\t{:?}", tokens);
 
     if tokens.is_empty() {
         return Err("Empty input not allowed".to_string());
@@ -573,5 +583,13 @@ mod tests {
         // test empty alternation
         let result = parse_string_to_regex("|");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_email() {
+        let pattern = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z][a-zA-Z]+";
+        let regex = parse_string_to_regex(pattern);
+        println!("Error: {:?}", regex);
+        assert!(regex.is_ok());
     }
 }

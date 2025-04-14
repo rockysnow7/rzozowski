@@ -3,7 +3,7 @@ use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
 pub enum Token {
-    #[regex(r"[^(){}\[\]|*+?\-\\,]", |lex| lex.slice().chars().next().unwrap())]
+    #[regex(r"[^(){}\[\]|*+?\-\\,%@.]", |lex| lex.slice().chars().next().unwrap())]
     Literal(char),
     #[token("(")]
     OpenParen,
@@ -31,6 +31,12 @@ pub enum Token {
     Backslash,
     #[token(",")]
     Comma,
+    #[token("%")]
+    Percent,
+    #[token(".")]
+    Dot,
+    #[token("@")]
+    At,
 }
 
 impl fmt::Display for Token {
@@ -56,6 +62,9 @@ impl Token {
             Token::Hyphen => Ok('-'),
             Token::Backslash => Ok('\\'),
             Token::Comma => Ok(','),
+            Token::Percent => Ok('%'),
+            Token::Dot => Ok('.'),
+            Token::At => Ok('@'),
         }
     }
 }

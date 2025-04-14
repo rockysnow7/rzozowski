@@ -384,7 +384,7 @@ impl Regex {
     }
 
     /// Tries to parse a string into a `Regex`.
-    pub fn from_str(s: &str) -> Result<Regex, String> {
+    pub fn new(s: &str) -> Result<Regex, String> {
         parse_string_to_regex(s)
     }
 }

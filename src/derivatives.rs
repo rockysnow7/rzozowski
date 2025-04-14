@@ -2,7 +2,7 @@ use std::fmt::{self, Debug};
 use crate::parser::parse_string_to_regex;
 
 pub const CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '\\'];
-pub const NON_CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '(', ')', '{', '}', '?', '*', '+', '|', '.', '\\'];
+pub const NON_CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '(', ')', '{', '}', '?', '*', '+', '|', '\\'];
 
 fn escape_regex_char(c: char, in_class: bool) -> String {
     let to_escape = if in_class {
@@ -18,9 +18,12 @@ fn escape_regex_char(c: char, in_class: bool) -> String {
     }
 }
 
+/// A struct that represents a set of characters to be matched in a character class.
 #[derive(Clone, PartialEq, Eq)]
 pub enum CharRange {
+    /// A single character (e.g., `a`).
     Single(char),
+    /// A range of characters (e.g., `a-z`).
     Range(char, char),
 }
 
@@ -40,6 +43,7 @@ impl Debug for CharRange {
 }
 
 impl CharRange {
+    /// Returns `true` if the given character is in the range, otherwise returns `false`.
     fn contains(&self, c: &char) -> bool {
         match self {
             CharRange::Single(ch) => *ch == *c,
@@ -48,6 +52,7 @@ impl CharRange {
     }
 }
 
+/// A struct that represents the number of times a regex can match. If `max` is `None`, the regex must match exactly `min` times. If `max` is `Some(n)`, the regex must match between `min` and `n` times (inclusive).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Count {
     pub min: usize,
@@ -73,15 +78,25 @@ impl Debug for Count {
 /// A regular expression.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Regex {
+    /// A regex that does not match any strings.
     Empty,
+    /// A regex that matches the empty string.
     Epsilon,
+    /// A regex that matches a single character (e.g., `a`).
     Literal(char),
+    /// A regex that matches a concatenation of two regexes (e.g., `ab`).
     Concat(Box<Regex>, Box<Regex>),
+    /// A regex that matches an alternation of two regexes (e.g., `a|b`).
     Or(Box<Regex>, Box<Regex>),
+    /// A regex that matches zero or one of the given regex (e.g., `a?`).
     ZeroOrOne(Box<Regex>),
+    /// A regex that matches zero or more of the given regex (e.g., `a*`).
     ZeroOrMore(Box<Regex>),
+    /// A regex that matches one or more of the given regex (e.g., `a+`).
     OneOrMore(Box<Regex>),
+    /// A regex that matches any character in the given character class (e.g., `[a-z]`).
     Class(Vec<CharRange>),
+    /// A regex that matches a given regex a specified number of times (e.g., `a{3}` or `a{3,5}`).
     Count(Box<Regex>, Count),
 }
 
@@ -134,7 +149,7 @@ impl Regex {
         }
     }
 
-    /// If the regex is nullable, return `Regex::Epsilon`, otherwise return `Regex::Empty`.
+    /// If the regex is nullable, returns `Regex::Epsilon`, otherwise returns `Regex::Empty`.
     pub fn is_nullable(&self) -> Regex {
         if self.is_nullable_() {
             Regex::Epsilon
@@ -359,7 +374,7 @@ impl Regex {
         }
     }
 
-    /// Returns true if the regex matches the given string.
+    /// Returns `true` if the regex matches the given string, otherwise returns `false`.
     pub fn matches(&self, s: &str) -> bool {
         let mut current = self.clone();
         for c in s.chars() {
@@ -367,11 +382,10 @@ impl Regex {
         }
         current.is_nullable_()
     }
-}
 
-impl From<String> for Regex {
-    fn from(value: String) -> Self {
-        parse_string_to_regex(&value).unwrap()
+    /// Tries to parse a string into a `Regex`.
+    pub fn from_str(s: &str) -> Result<Regex, String> {
+        parse_string_to_regex(s)
     }
 }
 

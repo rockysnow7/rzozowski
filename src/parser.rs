@@ -548,8 +548,8 @@ mod tests {
 
     #[test]
     fn parse_unicode() {
-        let regex = parse_string_to_regex("💕").unwrap();
-        assert_eq!(regex, Regex::Literal('💕'));
+        let regex = parse_string_to_regex("💕+").unwrap();
+        assert_eq!(regex, Regex::OneOrMore(Box::new(Regex::Literal('💕'))));
     }
 
     #[test]

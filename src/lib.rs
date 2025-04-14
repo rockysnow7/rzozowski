@@ -3,5 +3,4 @@
 mod derivatives;
 mod parser;
 
-pub use derivatives::Regex;
-pub use parser::parse_string_to_regex as parse;
+pub use derivatives::{Regex, Count, CharRange};

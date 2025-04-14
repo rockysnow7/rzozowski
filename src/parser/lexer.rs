@@ -3,7 +3,7 @@ use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
 pub enum Token {
-    #[regex(r"[a-zA-Z0-9_]", |lex| lex.slice().chars().next().unwrap())]
+    #[regex(r"[^(){}\[\]|*+?\-\\,]", |lex| lex.slice().chars().next().unwrap())]
     Literal(char),
     #[token("(")]
     OpenParen,

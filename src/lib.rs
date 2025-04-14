@@ -1,5 +1,6 @@
+#![warn(unused_crate_dependencies)]
+
 mod derivatives;
-mod dfa;
+mod parser;
 
 pub use derivatives::Regex;
-pub use dfa::DFA;

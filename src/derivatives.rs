@@ -1,9 +1,20 @@
 use std::fmt::{self, Debug};
+use crate::parser::parse_string_to_regex;
 
-fn escape_regex_char(c: char) -> String {
-    match c {
-        '[' | ']' | '-' | '(' | ')' | '{' | '}' | '?' | '*' | '+' | '∅' | 'ε' => format!("\\{}", c),
-        _ => c.to_string(),
+pub const CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '\\'];
+pub const NON_CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '(', ')', '{', '}', '?', '*', '+', '|', '.', '\\'];
+
+fn escape_regex_char(c: char, in_class: bool) -> String {
+    let to_escape = if in_class {
+        CLASS_ESCAPE_CHARS
+    } else {
+        NON_CLASS_ESCAPE_CHARS
+    };
+
+    if to_escape.contains(&c) {
+        format!("\\{}", c)
+    } else {
+        c.to_string()
     }
 }
 
@@ -16,11 +27,12 @@ pub enum CharRange {
 impl ToString for CharRange {
     fn to_string(&self) -> String {
         match self {
-            CharRange::Single(c) => escape_regex_char(*c),
-            CharRange::Range(start, end) => format!("{}-{}", escape_regex_char(*start), escape_regex_char(*end)),
+            CharRange::Single(c) => escape_regex_char(*c, true),
+            CharRange::Range(start, end) => format!("{}-{}", escape_regex_char(*start, true), escape_regex_char(*end, true)),
         }
     }
 }
+
 impl Debug for CharRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_string())
@@ -36,7 +48,7 @@ impl CharRange {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Count {
     pub min: usize,
     pub max: Option<usize>,
@@ -77,7 +89,7 @@ impl ToString for Regex {
         match self {
             Regex::Empty => "∅".to_string(),
             Regex::Epsilon => "ε".to_string(),
-            Regex::Literal(c) => c.to_string(),
+            Regex::Literal(c) => escape_regex_char(*c, false),
             Regex::Concat(left, right) => format!("{}{}", left.to_string(), right.to_string()),
             Regex::Or(left, right) => format!("({}|{})", left.to_string(), right.to_string()),
             Regex::ZeroOrOne(inner) => format!("({})?", inner.to_string()),
@@ -101,28 +113,28 @@ impl Debug for Regex {
 }
 
 impl Regex {
-    fn is_nullable(&self) -> bool {
+    fn is_nullable_(&self) -> bool {
         match self {
             Regex::Empty => false,
             Regex::Epsilon => true,
             Regex::Literal(_) => false,
-            Regex::Concat(left, right) => left.is_nullable() && right.is_nullable(),
-            Regex::Or(left, right) => left.is_nullable() || right.is_nullable(),
+            Regex::Concat(left, right) => left.is_nullable_() && right.is_nullable_(),
+            Regex::Or(left, right) => left.is_nullable_() || right.is_nullable_(),
             Regex::ZeroOrOne(_) | Regex::ZeroOrMore(_) => true,
-            Regex::OneOrMore(inner) => inner.is_nullable(),
+            Regex::OneOrMore(inner) => inner.is_nullable_(),
             Regex::Class(_) => false,
             Regex::Count(inner, quantifier) => {
                 if quantifier.min == 0 {
                     true
                 } else {
-                    inner.is_nullable()
+                    inner.is_nullable_()
                 }
             },
         }
     }
 
-    fn delta(&self) -> Regex {
-        if self.is_nullable() {
+    pub fn is_nullable(&self) -> Regex {
+        if self.is_nullable_() {
             Regex::Epsilon
         } else {
             Regex::Empty
@@ -146,7 +158,7 @@ impl Regex {
                         right.clone(),
                     ).simplify()),
                     Box::new(Regex::Concat(
-                        Box::new(left.delta()),
+                        Box::new(left.is_nullable()),
                         Box::new(right.derivative(c)),
                     ).simplify()),
                 )
@@ -338,9 +350,15 @@ impl Regex {
                     return inner_simplified;
                 }
 
-                Regex::Count(Box::new(inner_simplified), count.clone())
+                Regex::Count(Box::new(inner_simplified), *count)
             },
         }
+    }
+}
+
+impl From<String> for Regex {
+    fn from(value: String) -> Self {
+        parse_string_to_regex(&value).unwrap()
     }
 }
 

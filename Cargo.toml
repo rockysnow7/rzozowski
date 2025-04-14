@@ -7,3 +7,6 @@ edition = "2021"
 name = "rzozowski"
 
 [dependencies]
+chumsky = "0.10.1"
+logos = "0.15.0"
+once_cell = "1.19.0"

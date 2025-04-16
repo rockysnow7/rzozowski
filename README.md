@@ -4,6 +4,8 @@
 
 *rzozowski* (ruh-zov-ski) is a Rust crate for reasoning about regular expressions in terms of Brzozowski derivatives.
 
+<img alt="Crates.io Version" src="https://img.shields.io/crates/v/rzozowski?link=https%3A%2F%2Fcrates.io%2Fcrates%2Frzozowski"> <img alt="docs.rs" src="https://img.shields.io/docsrs/rzozowski?link=https%3A%2F%2Fdocs.rs%2Frzozowski%2Flatest%2Frzozowski%2F">
+
 ## What is a Brzozowski derivative?
 
 Let's say we have a regular expression $R$ and a character $c$. The Brzozowski derivative of $R$ with respect to $c$, written as $D_c(R)$, is a new regular expression that constitutes the remainder of $R$ after $c$ has been matched.

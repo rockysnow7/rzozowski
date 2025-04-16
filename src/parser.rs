@@ -351,7 +351,7 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
         .into_result();
 
     match result {
-        Ok(regex) => Ok(regex.to_regex()),
+        Ok(regex) => Ok(regex.to_regex().simplify()),
         Err(errors) => {
             let mut error_message = String::new();
             for error in errors {
@@ -402,13 +402,20 @@ mod tests {
     #[test]
     fn parse_character_class_long() {
         let regex = parse_string_to_regex("[a-zA-Z0-9]").unwrap();
-        assert_eq!(regex, Regex::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9')]));
+        assert_eq!(regex, Regex::Class(vec![
+            CharRange::Range('a', 'z'),
+            CharRange::Range('A', 'Z'),
+            CharRange::Range('0', '9'),
+        ]).simplify());
     }
 
     #[test]
     fn parse_character_class_mixed() {
         let regex = parse_string_to_regex("[a-zA]").unwrap();
-        assert_eq!(regex, Regex::Class(vec![CharRange::Range('a', 'z'), CharRange::Single('A')]));
+        assert_eq!(regex, Regex::Class(vec![
+            CharRange::Range('a', 'z'),
+            CharRange::Single('A'),
+        ]).simplify());
     }
 
     #[test]

@@ -9,3 +9,12 @@ fn test_parse_and_matches() {
     assert!(regex.matches("abc"));
     assert!(regex.matches("abbaccc"));
 }
+
+#[test]
+fn test_equality() {
+    let r = Regex::new(r"\d{3,6}[a-z_]+").unwrap();
+    assert!(r.matches("123abc"));
+
+    let der = r.derivative('1');
+    assert_eq!(der, Regex::new(r"\d{2,5}[a-z_]+").unwrap());
+}

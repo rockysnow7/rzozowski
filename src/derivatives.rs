@@ -278,7 +278,7 @@ impl Regex {
                 )
             },
             Regex::ZeroOrOne(inner) => {
-                inner.simplify()
+                Regex::ZeroOrOne(Box::new(inner.simplify()))
             },
             Regex::ZeroOrMore(inner) => {
                 let inner_simplified = inner.simplify();

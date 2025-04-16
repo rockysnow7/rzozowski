@@ -1,7 +1,15 @@
 [package]
 name = "rzozowski"
 version = "0.1.0"
+authors = ["rockysnow7 <feyles@icloud.com>"]
 edition = "2021"
+description = "A regex crate using Brzozowski derivatives."
+license = "MIT"
+repository = "https://github.com/rockysnow7/rzozowski"
+documentation = "https://docs.rs/rzozowski"
+readme = "README.md"
+keywords = ["regex", "brzozowski", "derivatives"]
+categories = ["text-processing"]
 
 [lib]
 name = "rzozowski"

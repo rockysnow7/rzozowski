@@ -6,11 +6,11 @@
 
 ## What is a Brzozowski derivative?
 
-Let's say we have a regular expression $R$ and a character $c$. The Brzozowski derivative of $R$ with respect to $c$ (written as $D_c(R)$) is a new regular expression that constitutes the remainder of $R$ after $c$ has been matched.
+Let's say we have a regular expression $R$ and a character $c$. The Brzozowski derivative of $R$ with respect to $c$, written as $D_c(R)$, is a new regular expression that constitutes the remainder of $R$ after $c$ has been matched.
 
 For example, if we have the regular expression $R = abc$ and the character $a$, the Brzozowski derivative is $D_a(R) = bc$.
 
-For a more complex example, take the regular expression $R = a*b$. Because $a$ can be matched multiple times, $D_a(R) = a*b$. If we instead take the derivative with respect to $b$, we get $D_b(R) = \epsilon$ (the empty string), because nothing can be matched after $b$.
+For a more complex example, take the regular expression $R = a\*b$. Because $a$ can be matched multiple times, $D_a(R) = a*b$. If we instead take the derivative with respect to $b$, we get $D_b(R) = \epsilon$ (the empty string), because nothing can be matched after $b$.
 
 ## Why is this interesting?
 

@@ -26,6 +26,7 @@ pub enum CharRange {
     /// A range of characters (e.g., `a-z`).
     Range(char, char),
 }
+
 impl Display for CharRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -45,19 +46,23 @@ impl CharRange {
     }
 }
 
-/// A struct that represents the number of times a regex can match. If `max` is `None`, the regex must match exactly `min` times. If `max` is `Some(n)`, the regex must match between `min` and `n` times (inclusive).
+/// An enum that represents the number of times a regex can match.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Count {
-    pub min: usize,
-    pub max: Option<usize>,
+pub enum Count {
+    /// The regex must match exactly `n` times.
+    Exact(usize),
+    /// The regex must match between `min` and `max` times (inclusive).
+    Range(usize, usize),
+    /// The regex must match at least `min` times.
+    AtLeast(usize),
 }
 
 impl Display for Count {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(max) = self.max {
-            write!(f, "{{{},{}}}", self.min, max)
-        } else {
-            write!(f, "{{{}}}", self.min)
+        match self {
+            Count::Exact(n) => write!(f, "{{{}}}", n),
+            Count::Range(min, max) => write!(f, "{{{},{}}}", min, max),
+            Count::AtLeast(min) => write!(f, "{{{},}}", min),
         }
     }
 }
@@ -75,12 +80,6 @@ pub enum Regex {
     Concat(Box<Regex>, Box<Regex>),
     /// A regex that matches an alternation of two regexes (e.g., `a|b`).
     Or(Box<Regex>, Box<Regex>),
-    /// A regex that matches zero or one of the given regex (e.g., `a?`).
-    ZeroOrOne(Box<Regex>),
-    /// A regex that matches zero or more of the given regex (e.g., `a*`).
-    ZeroOrMore(Box<Regex>),
-    /// A regex that matches one or more of the given regex (e.g., `a+`).
-    OneOrMore(Box<Regex>),
     /// A regex that matches any character in the given character class (e.g., `[a-z]`).
     Class(Vec<CharRange>),
     /// A regex that matches a given regex a specified number of times (e.g., `a{3}` or `a{3,5}`).
@@ -95,9 +94,6 @@ impl Display for Regex {
             Regex::Literal(c) => escape_regex_char(*c, false),
             Regex::Concat(left, right) => format!("{}{}", left, right),
             Regex::Or(left, right) => format!("({}|{})", left, right),
-            Regex::ZeroOrOne(inner) => format!("({})?", inner),
-            Regex::ZeroOrMore(inner) => format!("({})*", inner),
-            Regex::OneOrMore(inner) => format!("({})+", inner),
             Regex::Class(ranges) => {
                 let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<Vec<String>>().join("");
                 format!("[{}]", ranges_str)
@@ -110,6 +106,27 @@ impl Display for Regex {
 }
 
 impl Regex {
+    pub fn star(&self) -> Regex {
+        Regex::Count(
+            Box::new(self.clone()),
+            Count::AtLeast(0),
+        )
+    }
+
+    pub fn plus(&self) -> Regex {
+        Regex::Count(
+            Box::new(self.clone()),
+            Count::AtLeast(1),
+        )
+    }
+
+    pub fn optional(&self) -> Regex {
+        Regex::Count(
+            Box::new(self.clone()),
+            Count::Range(0, 1),
+        )
+    }
+
     fn is_nullable_(&self) -> bool {
         match self {
             Regex::Empty => false,
@@ -117,14 +134,11 @@ impl Regex {
             Regex::Literal(_) => false,
             Regex::Concat(left, right) => left.is_nullable_() && right.is_nullable_(),
             Regex::Or(left, right) => left.is_nullable_() || right.is_nullable_(),
-            Regex::ZeroOrOne(_) | Regex::ZeroOrMore(_) => true,
-            Regex::OneOrMore(inner) => inner.is_nullable_(),
             Regex::Class(_) => false,
-            Regex::Count(inner, quantifier) => {
-                if quantifier.min == 0 {
-                    true
-                } else {
-                    inner.is_nullable_()
+            Regex::Count(_, quantifier) => {
+                match quantifier {
+                    Count::Exact(n) => *n == 0,
+                    Count::Range(min, _) | Count::AtLeast(min) => *min == 0,
                 }
             },
         }
@@ -168,24 +182,6 @@ impl Regex {
                     Box::new(right.derivative(c)),
                 )
             },
-            Regex::ZeroOrOne(inner) => {
-                Regex::Or(
-                    inner.clone(),
-                    Box::new(Regex::Epsilon),
-                ).derivative(c)
-            },
-            Regex::ZeroOrMore(inner) => {
-                Regex::Concat(
-                    Box::new(inner.derivative(c)),
-                    Box::new(Regex::ZeroOrMore(inner.clone()).simplify()),
-                )
-            },
-            Regex::OneOrMore(inner) => {
-                Regex::Concat(
-                    inner.clone(),
-                    Box::new(Regex::ZeroOrMore(inner.clone()).simplify()),
-                ).derivative(c)
-            },
             Regex::Class(ranges) => {
                 for range in ranges {
                     if range.contains(&c) {
@@ -195,9 +191,10 @@ impl Regex {
                 Regex::Empty
             },
             Regex::Count(inner, count) => {
-                let new_count = Count {
-                    min: count.min.saturating_sub(1),
-                    max: count.max.map(|max| max.saturating_sub(1)),
+                let new_count = match count {
+                    Count::Exact(n) => Count::Exact(n.saturating_sub(1)),
+                    Count::Range(min, max) => Count::Range(min.saturating_sub(1), max.saturating_sub(1)),
+                    Count::AtLeast(min) => Count::AtLeast(min.saturating_sub(1)),
                 };
 
                 Regex::Concat(
@@ -258,34 +255,6 @@ impl Regex {
                     Box::new(right_simplified),
                 )
             },
-            Regex::ZeroOrOne(inner) => {
-                Regex::ZeroOrOne(Box::new(inner.simplify()))
-            },
-            Regex::ZeroOrMore(inner) => {
-                let inner_simplified = inner.simplify();
-
-                // ∅* = ε* = ε
-                if **inner == Regex::Empty || **inner == Regex::Epsilon {
-                    return Regex::Epsilon;
-                }
-
-                // (r*)* = r*
-                if let Regex::ZeroOrMore(_) = inner_simplified {
-                    return inner_simplified;
-                }
-
-                Regex::ZeroOrMore(Box::new(inner.simplify()))
-            },
-            Regex::OneOrMore(inner) => {
-                let inner_simplified = inner.simplify();
-
-                // (ε)+ = ε
-                if inner_simplified == Regex::Epsilon {
-                    return Regex::Epsilon;
-                }
-
-                Regex::OneOrMore(Box::new(inner_simplified))
-            },
             Regex::Class(ranges) => {
                 let mut new_ranges = Vec::new();
                 let mut changed = false;
@@ -322,31 +291,52 @@ impl Regex {
             Regex::Count(inner, count) => {
                 let inner_simplified = inner.simplify();
 
-                // ∅{n} = ∅
+                // ∅* = ε* = ε
+                if let Count::AtLeast(0) = count {
+                    if inner_simplified == Regex::Empty {
+                        return Regex::Epsilon;
+                    }
+                }
+
+                // (r*)* = r*
+                if let Count::AtLeast(0) = count {
+                    if let Regex::Count(_, Count::AtLeast(0)) = inner_simplified {
+                        return inner_simplified;
+                    }
+                }
+
+                // (ε)+ = ε
+                if let Count::AtLeast(1) = count {
+                    if inner_simplified == Regex::Epsilon {
+                        return Regex::Epsilon;
+                    }
+                }
+
+                // ∅{n,m} = ∅
                 if inner_simplified == Regex::Empty {
                     return Regex::Empty;
                 }
-                // ε{n} = ε
+                // ε{n,m} = ε
                 if inner_simplified == Regex::Epsilon {
                     return Regex::Epsilon;
                 }
 
                 // r{n,n} = r{n}
-                if let Some(max) = count.max {
-                    if count.min == max {
+                if let Count::Range(min, max) = count {
+                    if min == max {
                         return Regex::Count(
                             Box::new(inner_simplified),
-                            Count { min: count.min, max: None },
+                            Count::Exact(*min),
                         ).simplify();
                     }
                 }
 
                 // r{0} = ε
-                if count.min == 0 && count.max.is_none() {
+                if let Count::Exact(0) = count {
                     return Regex::Epsilon;
                 }
                 // r{1} = r
-                if count.min == 1 && count.max.is_none() {
+                if let Count::Exact(1) = count {
                     return inner_simplified;
                 }
 
@@ -408,15 +398,6 @@ mod tests {
     }
 
     #[test]
-    fn test_derivative_concat_nullable_first() {
-        let regex = Regex::Concat(
-            Box::new(Regex::ZeroOrOne(Box::new(Regex::Literal('a')))),
-            Box::new(Regex::Literal('b'))
-        );
-        assert_eq!(regex.derivative('b'), Regex::Epsilon);
-    }
-
-    #[test]
     fn test_derivative_or_left_match() {
         let regex = Regex::Or(
             Box::new(Regex::Literal('a')),
@@ -444,39 +425,6 @@ mod tests {
     }
 
     #[test]
-    fn test_derivative_zero_or_one() {
-        let regex = Regex::ZeroOrOne(Box::new(Regex::Literal('a')));
-        assert_eq!(regex.derivative('a'), Regex::Epsilon);
-        assert_eq!(regex.derivative('b'), Regex::Empty);
-    }
-
-    #[test]
-    fn test_derivative_zero_or_more_match() {
-        let regex = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
-        let result = regex.derivative('a');
-        assert_eq!(result, Regex::ZeroOrMore(Box::new(Regex::Literal('a'))));
-    }
-
-    #[test]
-    fn test_derivative_zero_or_more_no_match() {
-        let regex = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
-        assert_eq!(regex.derivative('b'), Regex::Empty);
-    }
-
-    #[test]
-    fn test_derivative_one_or_more_match() {
-        let regex = Regex::OneOrMore(Box::new(Regex::Literal('a')));
-        let result = regex.derivative('a');
-        assert_eq!(result, Regex::ZeroOrMore(Box::new(Regex::Literal('a'))));
-    }
-
-    #[test]
-    fn test_derivative_one_or_more_no_match() {
-        let regex = Regex::OneOrMore(Box::new(Regex::Literal('a')));
-        assert_eq!(regex.derivative('b'), Regex::Empty);
-    }
-
-    #[test]
     fn test_derivative_class_match() {
         let regex = Regex::Class(vec![
             CharRange::Single('a'),
@@ -500,12 +448,12 @@ mod tests {
     fn test_derivative_count_match() {
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: Some(3) }
+            Count::Range(2, 3),
         );
         let result = regex.derivative('a');
         assert_eq!(result, Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 1, max: Some(2) }
+            Count::Range(1, 2),
         ));
     }
 
@@ -513,7 +461,7 @@ mod tests {
     fn test_derivative_count_no_match() {
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: Some(3) }
+            Count::Range(2, 3)
         );
         assert_eq!(regex.derivative('b'), Regex::Empty);
     }
@@ -524,31 +472,31 @@ mod tests {
         let regex = Regex::Concat(
             Box::new(Regex::Literal('a')),
             Box::new(Regex::Concat(
-                Box::new(Regex::ZeroOrMore(Box::new(Regex::Or(
+                Box::new(Regex::Or(
                     Box::new(Regex::Literal('b')),
                     Box::new(Regex::Literal('c'))
-                )))),
+                ).star()),
                 Box::new(Regex::Literal('d'))
             ))
         );
-        
+
         // Take derivative with respect to 'a'
         let d1 = regex.derivative('a');
         assert_eq!(d1, Regex::Concat(
-            Box::new(Regex::ZeroOrMore(Box::new(Regex::Or(
+            Box::new(Regex::Or(
                 Box::new(Regex::Literal('b')),
                 Box::new(Regex::Literal('c'))
-            )))),
+            ).star()),
             Box::new(Regex::Literal('d'))
         ));
         
         // Take derivative with respect to 'b'
         let d2 = d1.derivative('b');
         assert_eq!(d2, Regex::Concat(
-            Box::new(Regex::ZeroOrMore(Box::new(Regex::Or(
+            Box::new(Regex::Or(
                 Box::new(Regex::Literal('b')),
                 Box::new(Regex::Literal('c'))
-            )))),
+            ).star()),
             Box::new(Regex::Literal('d'))
         ));
         
@@ -640,26 +588,26 @@ mod tests {
     #[test]
     fn test_simplify_zero_or_more() {
         // ∅* = ε
-        let regex = Regex::ZeroOrMore(Box::new(Regex::Empty));
+        let regex = Regex::Empty.star();
         assert_eq!(regex.simplify(), Regex::Epsilon);
 
         // ε* = ε
-        let regex = Regex::ZeroOrMore(Box::new(Regex::Epsilon));
+        let regex = Regex::Epsilon.star();
         assert_eq!(regex.simplify(), Regex::Epsilon);
 
         // (r*)* = r*
-        let inner = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
-        let regex = Regex::ZeroOrMore(Box::new(inner));
-        assert_eq!(regex.simplify(), Regex::ZeroOrMore(Box::new(Regex::Literal('a'))));
+        let inner = Regex::Literal('a').star();
+        let regex = inner.star();
+        assert_eq!(regex.simplify(), inner);
     }
     
     #[test]
     fn test_simplify_one_or_more() {
         // ε+ = ε
-        let regex = Regex::OneOrMore(Box::new(Regex::Epsilon));
+        let regex = Regex::Epsilon.plus();
         assert_eq!(regex.simplify(), Regex::Epsilon);
     }
-    
+
     #[test]
     fn test_simplify_class() {
         // Single char class to literal
@@ -688,38 +636,66 @@ mod tests {
         // ∅{n} = ∅
         let regex = Regex::Count(
             Box::new(Regex::Empty),
-            Count { min: 2, max: Some(3) }
+            Count::Exact(2),
         );
         assert_eq!(regex.simplify(), Regex::Empty);
-        
+
+        // ∅{n,m} = ∅
+        let regex = Regex::Count(
+            Box::new(Regex::Empty),
+            Count::Range(2, 3)
+        );
+        assert_eq!(regex.simplify(), Regex::Empty);
+
+        // ∅{n,} = ∅
+        let regex = Regex::Count(
+            Box::new(Regex::Empty),
+            Count::AtLeast(2)
+        );
+        assert_eq!(regex.simplify(), Regex::Empty);
+
         // ε{n} = ε
         let regex = Regex::Count(
             Box::new(Regex::Epsilon),
-            Count { min: 2, max: Some(3) }
+            Count::Exact(2)
         );
         assert_eq!(regex.simplify(), Regex::Epsilon);
-        
+
+        // ε{n,m} = ε
+        let regex = Regex::Count(
+            Box::new(Regex::Epsilon),
+            Count::Range(2, 3)
+        );
+        assert_eq!(regex.simplify(), Regex::Epsilon);
+
+        // ε{n,} = ε
+        let regex = Regex::Count(
+            Box::new(Regex::Epsilon),
+            Count::AtLeast(2)
+        );
+        assert_eq!(regex.simplify(), Regex::Epsilon);
+
         // r{n,n} = r{n}
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: Some(2) }
+            Count::Range(2, 2),
         );
         assert_eq!(regex.simplify(), Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: None }
+            Count::Exact(2),
         ));
-        
+
         // r{0} = ε
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 0, max: None }
+            Count::Exact(0),
         );
         assert_eq!(regex.simplify(), Regex::Epsilon);
         
         // r{1} = r
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 1, max: None }
+            Count::Exact(1),
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
@@ -734,7 +710,7 @@ mod tests {
             )),
             Box::new(Regex::Or(
                 Box::new(Regex::Epsilon),
-                Box::new(Regex::ZeroOrMore(Box::new(Regex::Literal('b'))))
+                Box::new(Regex::Literal('b').star())
             ))
         );
         
@@ -744,7 +720,7 @@ mod tests {
             Box::new(Regex::Literal('a')),
             Box::new(Regex::Or(
                 Box::new(Regex::Epsilon),
-                Box::new(Regex::ZeroOrMore(Box::new(Regex::Literal('b'))))
+                Box::new(Regex::Literal('b').star())
             ))
         ));
     }
@@ -781,7 +757,7 @@ mod tests {
 
     #[test]
     fn test_matches_zero_or_more() {
-        let regex = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
+        let regex = Regex::Literal('a').star();
         assert!(regex.matches(""));
         assert!(regex.matches("a"));
         assert!(regex.matches("aa"));
@@ -792,8 +768,8 @@ mod tests {
     fn test_matches_complex() {
         let regex = Regex::Concat(
             Box::new(Regex::Literal('a')),
-            Box::new(Regex::ZeroOrMore(Box::new(Regex::Literal('b')))
-        )); // ab*
+            Box::new(Regex::Literal('b').star()),
+        ); // ab*
         assert!(regex.matches("a"));
         assert!(regex.matches("ab"));
         assert!(regex.matches("abb"));
@@ -805,7 +781,7 @@ mod tests {
     fn test_matches_count_range() {
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: Some(3) }
+            Count::Range(2, 3)
         );
         assert!(!regex.matches(""));
         assert!(!regex.matches("a"));
@@ -818,7 +794,7 @@ mod tests {
     fn test_matches_count_single() {
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
-            Count { min: 2, max: None }
+            Count::Exact(2)
         );
 
         assert!(!regex.matches(""));

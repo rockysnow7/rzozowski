@@ -47,25 +47,25 @@ impl fmt::Display for Token {
 
 impl Token {
     pub fn as_char(&self) -> Result<char, ()> {
-        match self {
-            Self::Literal(c) => Ok(*c),
-            Self::OpenParen => Ok('('),
-            Self::CloseParen => Ok(')'),
-            Self::OpenCurly => Ok('{'),
-            Self::CloseCurly => Ok('}'),
-            Self::OpenBracket => Ok('['),
-            Self::CloseBracket => Ok(']'),
-            Self::Pipe => Ok('|'),
-            Self::Star => Ok('*'),
-            Self::Plus => Ok('+'),
-            Self::Question => Ok('?'),
-            Self::Hyphen => Ok('-'),
-            Self::Backslash => Ok('\\'),
-            Self::Comma => Ok(','),
-            Self::Percent => Ok('%'),
-            Self::Dot => Ok('.'),
-            Self::At => Ok('@'),
-        }
+       Ok(match self {
+            Self::Literal(c) => *c,
+            Self::OpenParen => '(',
+            Self::CloseParen => ')',
+            Self::OpenCurly => '{',
+            Self::CloseCurly => '}',
+            Self::OpenBracket => '[',
+            Self::CloseBracket => ']',
+            Self::Pipe => '|',
+            Self::Star => '*',
+            Self::Plus => '+',
+            Self::Question => '?',
+            Self::Hyphen => '-',
+            Self::Backslash => '\\',
+            Self::Comma => ',',
+            Self::Percent => '%',
+            Self::Dot => '.',
+            Self::At => '@',
+        })
     }
 }
 

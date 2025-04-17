@@ -83,11 +83,11 @@ where
         matches!(token, Token::At)
     })
     .filter(|token| {
-        let c = token.as_char().unwrap();
+        let c = token.as_char();
         !NON_CLASS_ESCAPE_CHARS.contains(&c)
     })
     .map(|token| {
-        token.as_char().unwrap()
+        token.as_char()
     })
 }
 
@@ -99,11 +99,11 @@ where
     just(Token::Backslash)
         .then(any())
         .filter(|(_, token): &(_, Token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             NON_CLASS_ESCAPE_CHARS.contains(&c)
         })
         .map(|(_, token)| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 
@@ -115,11 +115,11 @@ where
     just(Token::Backslash)
         .then(any().filter(|token| matches!(token, Token::Literal(_))))
         .filter(|(_, token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             SPECIAL_CHAR_SEQUENCES.contains_key(&c)
         })
         .map(|(_, token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             SPECIAL_CHAR_SEQUENCES[&c].clone()
         })
 }
@@ -146,9 +146,9 @@ where
         matches!(token, Token::Dot) ||
         matches!(token, Token::At)
     })
-    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char().unwrap()))
+    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char()))
     .map(|token| {
-        token.as_char().unwrap()
+        token.as_char()
     })
 }
 
@@ -160,11 +160,11 @@ where
     just(Token::Backslash)
         .then(any())
         .filter(|(_, token): &(_, Token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             CLASS_ESCAPE_CHARS.contains(&c)
         })
         .map(|(_, token)| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 
@@ -236,11 +236,11 @@ where
 {
     any().filter(|token| matches!(token, Token::Literal(_)))
         .filter(|token| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             c.is_ascii_digit()
         })
         .map(|token| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 

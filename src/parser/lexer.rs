@@ -46,25 +46,25 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn as_char(&self) -> Result<char, ()> {
+    pub fn as_char(&self) -> char {
         match self {
-            Token::Literal(c) => Ok(*c),
-            Token::OpenParen => Ok('('),
-            Token::CloseParen => Ok(')'),
-            Token::OpenCurly => Ok('{'),
-            Token::CloseCurly => Ok('}'),
-            Token::OpenBracket => Ok('['),
-            Token::CloseBracket => Ok(']'),
-            Token::Pipe => Ok('|'),
-            Token::Star => Ok('*'),
-            Token::Plus => Ok('+'),
-            Token::Question => Ok('?'),
-            Token::Hyphen => Ok('-'),
-            Token::Backslash => Ok('\\'),
-            Token::Comma => Ok(','),
-            Token::Percent => Ok('%'),
-            Token::Dot => Ok('.'),
-            Token::At => Ok('@'),
+            Token::Literal(c) => *c,
+            Token::OpenParen => '(',
+            Token::CloseParen => ')',
+            Token::OpenCurly => '{',
+            Token::CloseCurly => '}',
+            Token::OpenBracket => '[',
+            Token::CloseBracket => ']',
+            Token::Pipe => '|',
+            Token::Star => '*',
+            Token::Plus => '+',
+            Token::Question => '?',
+            Token::Hyphen => '-',
+            Token::Backslash => '\\',
+            Token::Comma => ',',
+            Token::Percent => '%',
+            Token::Dot => '.',
+            Token::At => '@',
         }
     }
 }

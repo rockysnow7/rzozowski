@@ -48,7 +48,7 @@ Install with `cargo add rzozowski` or add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rzozowski = "0.1.1"
+rzozowski = "0.1.2"
 ```
 
 Usage is very simple. *rzozowski* allows you to:
@@ -83,7 +83,7 @@ fn main() {
 - Plus (e.g., `a+`)
 - Optional (e.g., `a?`)
 - Character classes (e.g., `[a-z123]`, `\d`, `\w`)
-- Counts (e.g., `a{3}` or `a{3,5}`)
+- Counts (e.g., `a{3}`, `a{3,}`, or `a{3,5}`)
 - Parentheses (e.g., `(ab)+`)
 
 Note that *rzozowski* currently does not support capture groups, backreferences, or lookaheads. If you need these features, you should use a more established regex crate or submit a pull request to add them here :)

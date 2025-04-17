@@ -61,8 +61,22 @@ impl Display for Count {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Count::Exact(n) => write!(f, "{{{}}}", n),
-            Count::Range(min, max) => write!(f, "{{{},{}}}", min, max),
-            Count::AtLeast(min) => write!(f, "{{{},}}", min),
+            Count::Range(min, max) => {
+                if *min == 0 && *max == 1 {
+                    write!(f, "?")
+                } else {
+                    write!(f, "{{{},{}}}", min, max)
+                }
+            },
+            Count::AtLeast(min) => {
+                if *min == 0 {
+                    write!(f, "*")
+                } else if *min == 1 {
+                    write!(f, "+")
+                } else {
+                    write!(f, "{{{},}}", min)
+                }
+            },
         }
     }
 }
@@ -810,5 +824,35 @@ mod tests {
         assert!(regex.matches("a"));
         assert!(regex.matches("b"));
         assert!(!regex.matches("c"));
+    }
+
+    #[test]
+    fn test_count_print() {
+        let regex = Regex::Count(
+            Box::new(Regex::Literal('a')),
+            Count::Range(2, 3)
+        );
+        assert_eq!(regex.to_string(), "(a){2,3}");
+
+        let regex = Regex::Count(
+            Box::new(Regex::Literal('a')),
+            Count::Exact(2)
+        );
+        assert_eq!(regex.to_string(), "(a){2}");
+
+        let regex = Regex::Count(
+            Box::new(Regex::Literal('a')),
+            Count::AtLeast(2)
+        );
+        assert_eq!(regex.to_string(), "(a){2,}");
+
+        let regex = Regex::Literal('a').star();
+        assert_eq!(regex.to_string(), "(a)*");
+
+        let regex = Regex::Literal('a').plus();
+        assert_eq!(regex.to_string(), "(a)+");
+
+        let regex = Regex::Literal('a').optional();
+        assert_eq!(regex.to_string(), "(a)?");
     }
 }

@@ -633,7 +633,7 @@ mod tests {
 
     #[test]
     fn parse_email() {
-        let pattern = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z][a-zA-Z]+";
+        let pattern = r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}";
         let regex = parse_string_to_regex(pattern);
         println!("Error: {:?}", regex);
         assert!(regex.is_ok());

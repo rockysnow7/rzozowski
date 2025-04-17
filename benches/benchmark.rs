@@ -92,7 +92,7 @@ static TEST_PATTERNS: LazyLock<[TestPattern; 14]> = LazyLock::new(|| {
         },
         TestPattern {
             name: "email",
-            pattern: r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z][a-zA-Z]+",
+            pattern: r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",
             valid_string: "test@example.com".to_string(),
             invalid_string: "test@example".to_string(),
         },

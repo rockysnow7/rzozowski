@@ -12,7 +12,7 @@ fn escape_regex_char(c: char, in_class: bool) -> String {
     };
 
     if to_escape.contains(&c) {
-        format!("\\{}", c)
+        format!("\\{c}")
     } else {
         c.to_string()
     }
@@ -93,17 +93,17 @@ impl Display for Regex {
             Regex::Empty => "∅".to_string(),
             Regex::Epsilon => "ε".to_string(),
             Regex::Literal(c) => escape_regex_char(*c, false),
-            Regex::Concat(left, right) => format!("{}{}", left, right),
-            Regex::Or(left, right) => format!("({}|{})", left, right),
-            Regex::ZeroOrOne(inner) => format!("({})?", inner),
-            Regex::ZeroOrMore(inner) => format!("({})*", inner),
-            Regex::OneOrMore(inner) => format!("({})+", inner),
+            Regex::Concat(left, right) => format!("{left}{right}"),
+            Regex::Or(left, right) => format!("({left}|{right})"),
+            Regex::ZeroOrOne(inner) => format!("({inner})?"),
+            Regex::ZeroOrMore(inner) => format!("({inner})*"),
+            Regex::OneOrMore(inner) => format!("({inner})+"),
             Regex::Class(ranges) => {
                 let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<Vec<String>>().join("");
-                format!("[{}]", ranges_str)
+                format!("[{ranges_str}]")
             }
             Regex::Count(inner, quantifier) => {
-                format!("({}){}", inner, quantifier)
+                format!("({inner}){quantifier}")
             },
         })
     }

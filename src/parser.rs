@@ -317,7 +317,7 @@ where
                 }).unwrap()
             });
 
-        
+
 
         concatenation.separated_by(just(Token::Pipe))
             .at_least(1)

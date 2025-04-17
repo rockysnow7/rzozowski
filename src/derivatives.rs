@@ -37,10 +37,10 @@ impl Display for CharRange {
 
 impl CharRange {
     /// Returns `true` if the given character is in the range, otherwise returns `false`.
-    fn contains(&self, c: &char) -> bool {
+    fn contains(&self, c: char) -> bool {
         match self {
-            CharRange::Single(ch) => *ch == *c,
-            CharRange::Range(start, end) => *start <= *c && *c <= *end,
+            CharRange::Single(ch) => *ch == c,
+            CharRange::Range(start, end) => *start <= c && c <= *end,
         }
     }
 }
@@ -188,7 +188,7 @@ impl Regex {
             },
             Regex::Class(ranges) => {
                 for range in ranges {
-                    if range.contains(&c) {
+                    if range.contains(c) {
                         return Regex::Epsilon;
                     }
                 }
@@ -371,6 +371,7 @@ impl Regex {
 }
 
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     // comprehensive derivative tests

@@ -74,27 +74,91 @@ for pattern, impls in match_results.items():
                 match_summary[impl][validity][category] = []
             match_summary[impl][validity][category].extend(times)
 
-# Print markdown tables
-def print_table(title, data):
-    print(f"## {title}")
-    print("\n| Category | rzozowski (ns) | regex (ns) | Ratio (rzozowski/regex) |")
-    print("|----------|----------------|------------|--------------------------|")
+def format_time(ns):
+    """Format time in appropriate units based on magnitude."""
+    if ns < 1000:
+        return f"{ns:.2f} ns"
+    elif ns < 1000000:
+        return f"{ns/1000:.2f} μs"
+    else:
+        return f"{ns/1000000:.2f} ms"
+
+# Calculate category averages across all patterns in a category
+category_averages = {
+    'parse_rzozowski': defaultdict(float),
+    'parse_regex': defaultdict(float),
+    'match_rzozowski_valid': defaultdict(float),
+    'match_regex_valid': defaultdict(float),
+    'match_rzozowski_invalid': defaultdict(float),
+    'match_regex_invalid': defaultdict(float)
+}
+
+# Calculate averages for parsing
+for category in ["simple", "intermediate", "complex"]:
+    if category in parse_summary.get("rzozowski", {}):
+        rz_times = parse_summary["rzozowski"][category]
+        category_averages['parse_rzozowski'][category] = sum(rz_times) / len(rz_times)
     
-    for category in ["simple", "intermediate", "complex"]:
-        if "rzozowski" in data and category in data["rzozowski"] and "regex" in data and category in data["regex"]:
-            rzo_avg = sum(data["rzozowski"][category]) / len(data["rzozowski"][category])
-            reg_avg = sum(data["regex"][category]) / len(data["regex"][category])
-            ratio = rzo_avg / reg_avg
-            print(f"| {category.capitalize()} | {rzo_avg:.2f} | {reg_avg:.2f} | {ratio:.2f} |")
-    print()
+    if category in parse_summary.get("regex", {}):
+        regex_times = parse_summary["regex"][category]
+        category_averages['parse_regex'][category] = sum(regex_times) / len(regex_times)
 
-# Generate output for README
-print("# Benchmark Results\n")
+# Calculate averages for matching
+for category in ["simple", "intermediate", "complex"]:
+    if category in match_summary.get("rzozowski", {}).get("valid", {}):
+        rz_valid_times = match_summary["rzozowski"]["valid"][category]
+        category_averages['match_rzozowski_valid'][category] = sum(rz_valid_times) / len(rz_valid_times)
+    
+    if category in match_summary.get("regex", {}).get("valid", {}):
+        regex_valid_times = match_summary["regex"]["valid"][category]
+        category_averages['match_regex_valid'][category] = sum(regex_valid_times) / len(regex_valid_times)
+    
+    if category in match_summary.get("rzozowski", {}).get("invalid", {}):
+        rz_invalid_times = match_summary["rzozowski"]["invalid"][category]
+        category_averages['match_rzozowski_invalid'][category] = sum(rz_invalid_times) / len(rz_invalid_times)
+    
+    if category in match_summary.get("regex", {}).get("invalid", {}):
+        regex_invalid_times = match_summary["regex"]["invalid"][category]
+        category_averages['match_regex_invalid'][category] = sum(regex_invalid_times) / len(regex_invalid_times)
 
-print_table("Regex Parsing Performance", parse_summary)
+# Define categories for each section
+parsing_categories = ["simple", "intermediate", "complex"]
+matching_categories = ["simple", "intermediate", "complex"]
 
-for validity in ["valid", "invalid"]:
-    rzo_data = {category: times for category, times in match_summary["rzozowski"][validity].items()}
-    reg_data = {category: times for category, times in match_summary["regex"][validity].items()}
-    combined_data = {"rzozowski": rzo_data, "regex": reg_data}
-    print_table(f"Regex Matching Performance ({validity} inputs)", combined_data)
+# Generate formatted output
+print("# Benchmark Results")
+print()
+print("## Regex Parsing Performance")
+print()
+print("| Category | rzozowski | regex | Ratio (rzozowski/regex) |")
+print("|----------|-----------|-------|--------------------------|")
+for category in parsing_categories:
+    if category in category_averages['parse_rzozowski'] and category in category_averages['parse_regex']:
+        rz_time = category_averages['parse_rzozowski'][category]
+        regex_time = category_averages['parse_regex'][category]
+        ratio = rz_time / regex_time
+        print(f"| {category.capitalize()} | {format_time(rz_time)} | {format_time(regex_time)} | {ratio:.2f} |")
+
+print()
+print("## Regex Matching Performance (valid inputs)")
+print()
+print("| Category | rzozowski | regex | Ratio (rzozowski/regex) |")
+print("|----------|-----------|-------|--------------------------|")
+for category in matching_categories:
+    if category in category_averages['match_rzozowski_valid'] and category in category_averages['match_regex_valid']:
+        rz_time = category_averages['match_rzozowski_valid'][category]
+        regex_time = category_averages['match_regex_valid'][category]
+        ratio = rz_time / regex_time
+        print(f"| {category.capitalize()} | {format_time(rz_time)} | {format_time(regex_time)} | {ratio:.2f} |")
+
+print()
+print("## Regex Matching Performance (invalid inputs)")
+print()
+print("| Category | rzozowski | regex | Ratio (rzozowski/regex) |")
+print("|----------|-----------|-------|--------------------------|")
+for category in matching_categories:
+    if category in category_averages['match_rzozowski_invalid'] and category in category_averages['match_regex_invalid']:
+        rz_time = category_averages['match_rzozowski_invalid'][category]
+        regex_time = category_averages['match_regex_invalid'][category]
+        ratio = rz_time / regex_time
+        print(f"| {category.capitalize()} | {format_time(rz_time)} | {format_time(regex_time)} | {ratio:.2f} |")

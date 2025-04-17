@@ -13,13 +13,13 @@ use once_cell::sync::Lazy;
 #[derive(Clone)]
 enum RegexRepresentation {
     Literal(char),
-    Concat(Box<RegexRepresentation>, Box<RegexRepresentation>),
-    Or(Box<RegexRepresentation>, Box<RegexRepresentation>),
-    Optional(Box<RegexRepresentation>),
-    Star(Box<RegexRepresentation>),
-    Plus(Box<RegexRepresentation>),
+    Concat(Box<Self>, Box<Self>),
+    Or(Box<Self>, Box<Self>),
+    Optional(Box<Self>),
+    Star(Box<Self>),
+    Plus(Box<Self>),
     Class(Vec<CharRange>),
-    Count(Box<RegexRepresentation>, Count),
+    Count(Box<Self>, Count),
 }
 
 impl RegexRepresentation {
@@ -76,11 +76,7 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     any().filter(|token| {
-        matches!(token, Token::Literal(_)) ||
-        matches!(token, Token::Percent) ||
-        matches!(token, Token::Plus) ||
-        matches!(token, Token::Dot) ||
-        matches!(token, Token::At)
+        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
     })
     .filter(|token| {
         let c = token.as_char().unwrap();
@@ -140,11 +136,7 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     any().filter(|token| {
-        matches!(token, Token::Literal(_)) ||
-        matches!(token, Token::Percent) ||
-        matches!(token, Token::Plus) ||
-        matches!(token, Token::Dot) ||
-        matches!(token, Token::At)
+        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
     })
     .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char().unwrap()))
     .map(|token| {

@@ -516,7 +516,6 @@ dependencies = [
  "chumsky",
  "criterion",
  "logos",
- "once_cell",
  "regex",
 ]
 

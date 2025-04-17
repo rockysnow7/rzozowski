@@ -6,9 +6,8 @@ use chumsky::{
 };
 use lexer::Token;
 use logos::Logos;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::LazyLock};
 use std::fmt::Write as _;
-use once_cell::sync::Lazy;
 
 /// Represents a regex in a more convenient format for parsing. This is an intermediate representation before converting to the final `Regex` type.
 #[derive(Clone)]
@@ -48,7 +47,7 @@ impl RegexRepresentation {
 }
 
 /// A map of special character sequences to their corresponding `RegexRepresentation`. For example, `\d` maps to `[0-9]`.
-static SPECIAL_CHAR_SEQUENCES: Lazy<HashMap<char, RegexRepresentation>> = Lazy::new(|| {
+static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = LazyLock::new(|| {
     let mut map = HashMap::new();
 
     // "\d" => [0-9]

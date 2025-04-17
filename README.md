@@ -4,7 +4,7 @@
 
 *rzozowski* (ruh-zov-ski) is a Rust crate for reasoning about regular expressions in terms of Brzozowski derivatives.
 
-<img alt="Crates.io Version" src="https://img.shields.io/crates/v/rzozowski?link=https%3A%2F%2Fcrates.io%2Fcrates%2Frzozowski"> <img alt="docs.rs" src="https://img.shields.io/docsrs/rzozowski?link=https%3A%2F%2Fdocs.rs%2Frzozowski%2Flatest%2Frzozowski%2F">
+<a href="https://crates.io/crates/rzozowski"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/rzozowski?link=https%3A%2F%2Fcrates.io%2Fcrates%2Frzozowski"></a> <a href="https://docs.rs/rzozowski"><img alt="docs.rs" src="https://img.shields.io/docsrs/rzozowski?link=https%3A%2F%2Fdocs.rs%2Frzozowski%2Flatest%2Frzozowski%2F"></a>
 
 ## What is a Brzozowski derivative?
 
@@ -88,51 +88,11 @@ fn main() {
 
 Note that *rzozowski* currently does not support capture groups, backreferences, or lookaheads. If you need these features, you should use a more established regex crate or submit a pull request to add them here :)
 
-## Performance Benchmarks
+## Speed vs. the standard regex crate
 
-Here are the results of some basic runtime benchmarks between `rzozowski` and the standard `regex` crate. The benchmarking code can be found in the `benches` directory.
+*rzozowski* is dramatically slower than the standard `regex` crate. I intend to properly benchmark it soon.
 
-### Overview
-
-Benchmarks are categorized into three complexity levels:
-- **Simple**: Basic regex operations (concatenation, alternation, star, plus, question, character classes)
-- **Intermediate**: More complex patterns (special character sequences, repetition counts, nested stars)
-- **Complex**: Advanced patterns (deeply nested expressions, complex character classes, email validation)
-
-Lower numbers are better. The ratio column shows `rzozowski`/`regex`, so values below 1.0 indicate `rzozowski` is faster.
-
-### Regex Parsing Performance
-
-| Category | rzozowski (µs) | regex (µs) | Ratio |
-|----------|----------------|------------|-------|
-| Simple | 1.13 | 5.27 | **0.22** |
-| Intermediate | 1.55 | 99.61 | **0.02** |
-| Complex | 3.14 | 48.57 | **0.06** |
-
-### Regex Matching Performance
-
-#### Valid inputs
-
-| Category | rzozowski (µs) | regex (µs) | Ratio |
-|----------|----------------|------------|-------|
-| Simple | 3.14 | 7.45 | **0.42** |
-| Intermediate | 108.03 | 105.91 | 1.02 |
-| Complex | 116.79 | 54.40 | 2.15 |
-
-#### Invalid inputs
-
-| Category | rzozowski (µs) | regex (µs) | Ratio |
-|----------|----------------|------------|-------|
-| Simple | 2.73 | 6.74 | **0.41** |
-| Intermediate | 75.49 | 103.68 | **0.73** |
-| Complex | 109.61 | 52.70 | 2.08 |
-
-### Summary
-
-- **Parsing**: `rzozowski` significantly outperforms the standard `regex` crate in pattern parsing across all complexity levels (4.5x-50x faster).
-- **Simple Pattern Matching**: For basic operations, `rzozowski` is approximately 2.4x faster than `regex`.
-- **Intermediate Pattern Matching**: For moderate complexity patterns, performance is comparable with `regex`, with `rzozowski` having a slight edge for invalid inputs.
-- **Complex Pattern Matching**: For the most complex patterns, the standard `regex` crate is about 2x faster.
+(Benchmarking code can be found in the `benches` directory.)
 
 ## Further reading
 

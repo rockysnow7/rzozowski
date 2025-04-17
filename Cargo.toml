@@ -10,6 +10,7 @@ documentation = "https://docs.rs/rzozowski"
 readme = "README.md"
 keywords = ["regex", "brzozowski", "derivatives"]
 categories = ["text-processing"]
+rust-version = "1.80"
 
 [lib]
 name = "rzozowski"

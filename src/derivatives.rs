@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug};
+use std::fmt::{Debug, Display, Formatter};
 use crate::parser::parse_string_to_regex;
 
 pub const CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '\\'];
@@ -19,26 +19,19 @@ fn escape_regex_char(c: char, in_class: bool) -> String {
 }
 
 /// A struct that represents a set of characters to be matched in a character class.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CharRange {
     /// A single character (e.g., `a`).
     Single(char),
     /// A range of characters (e.g., `a-z`).
     Range(char, char),
 }
-
-impl ToString for CharRange {
-    fn to_string(&self) -> String {
+impl Display for CharRange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CharRange::Single(c) => escape_regex_char(*c, true),
-            CharRange::Range(start, end) => format!("{}-{}", escape_regex_char(*start, true), escape_regex_char(*end, true)),
+            CharRange::Single(c) => write!(f, "{}", escape_regex_char(*c, true)),
+            CharRange::Range(start, end) => write!(f, "{}-{}", escape_regex_char(*start, true), escape_regex_char(*end, true)),
         }
-    }
-}
-
-impl Debug for CharRange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
     }
 }
 
@@ -53,30 +46,24 @@ impl CharRange {
 }
 
 /// A struct that represents the number of times a regex can match. If `max` is `None`, the regex must match exactly `min` times. If `max` is `Some(n)`, the regex must match between `min` and `n` times (inclusive).
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Count {
     pub min: usize,
     pub max: Option<usize>,
 }
 
-impl ToString for Count {
-    fn to_string(&self) -> String {
+impl Display for Count {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(max) = self.max {
-            format!("{{{},{}}}", self.min, max)
+            write!(f, "{{{},{}}}", self.min, max)
         } else {
-            format!("{{{}}}", self.min)
+            write!(f, "{{{}}}", self.min)
         }
     }
 }
 
-impl Debug for Count {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
-    }
-}
-
 /// A regular expression.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Regex {
     /// A regex that does not match any strings.
     Empty,
@@ -100,31 +87,25 @@ pub enum Regex {
     Count(Box<Regex>, Count),
 }
 
-impl ToString for Regex {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Regex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
             Regex::Empty => "∅".to_string(),
             Regex::Epsilon => "ε".to_string(),
             Regex::Literal(c) => escape_regex_char(*c, false),
-            Regex::Concat(left, right) => format!("{}{}", left.to_string(), right.to_string()),
-            Regex::Or(left, right) => format!("({}|{})", left.to_string(), right.to_string()),
-            Regex::ZeroOrOne(inner) => format!("({})?", inner.to_string()),
-            Regex::ZeroOrMore(inner) => format!("({})*", inner.to_string()),
-            Regex::OneOrMore(inner) => format!("({})+", inner.to_string()),
+            Regex::Concat(left, right) => format!("{}{}", left, right),
+            Regex::Or(left, right) => format!("({}|{})", left, right),
+            Regex::ZeroOrOne(inner) => format!("({})?", inner),
+            Regex::ZeroOrMore(inner) => format!("({})*", inner),
+            Regex::OneOrMore(inner) => format!("({})+", inner),
             Regex::Class(ranges) => {
                 let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<Vec<String>>().join("");
                 format!("[{}]", ranges_str)
             }
             Regex::Count(inner, quantifier) => {
-                format!("({}){}", inner.to_string(), quantifier.to_string())
+                format!("({}){}", inner, quantifier)
             },
-        }
-    }
-}
-
-impl Debug for Regex {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        })
     }
 }
 

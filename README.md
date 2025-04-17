@@ -90,9 +90,35 @@ Note that *rzozowski* currently does not support capture groups, backreferences,
 
 ## Speed vs. the standard regex crate
 
-*rzozowski* is dramatically slower than the standard `regex` crate. I intend to properly benchmark it soon.
+*rzozowski* is dramatically slower than the standard `regex` crate at matching, and faster at parsing.
 
-(Benchmarking code can be found in the `benches` directory.)
+Benchmarking code can be found in the `benches` directory. I intend to perform more thorough benchmarking soon.
+
+# Benchmark Results
+
+## Regex Parsing Performance
+
+| Category | rzozowski | regex | Ratio (rzozowski/regex) |
+|----------|-----------|-------|--------------------------|
+| Simple | 1.31 μs | 5.21 μs | 0.25 |
+| Intermediate | 1.94 μs | 98.97 μs | 0.02 |
+| Complex | 3.76 μs | 48.85 μs | 0.08 |
+
+## Regex Matching Performance (valid inputs)
+
+| Category | rzozowski | regex | Ratio (rzozowski/regex) |
+|----------|-----------|-------|--------------------------|
+| Simple | 1.91 μs | 11.42 ns | 167.63 |
+| Intermediate | 106.42 μs | 32.57 ns | 3267.25 |
+| Complex | 114.95 μs | 25.57 ns | 4496.19 |
+
+## Regex Matching Performance (invalid inputs)
+
+| Category | rzozowski | regex | Ratio (rzozowski/regex) |
+|----------|-----------|-------|--------------------------|
+| Simple | 1.56 μs | 7.89 ns | 198.34 |
+| Intermediate | 75.87 μs | 13.55 ns | 5598.72 |
+| Complex | 106.91 μs | 21.67 ns | 4932.49 |
 
 ## Further reading
 

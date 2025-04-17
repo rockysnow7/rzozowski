@@ -34,9 +34,9 @@ impl RegexRepresentation {
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Optional(inner) => Regex::ZeroOrOne(Box::new(inner.to_regex())),
-            RegexRepresentation::Star(inner) => Regex::ZeroOrMore(Box::new(inner.to_regex())),
-            RegexRepresentation::Plus(inner) => Regex::OneOrMore(Box::new(inner.to_regex())),
+            RegexRepresentation::Optional(inner) => inner.to_regex().optional(),
+            RegexRepresentation::Star(inner) => inner.to_regex().star(),
+            RegexRepresentation::Plus(inner) => inner.to_regex().plus(),
             RegexRepresentation::Class(ranges) => Regex::Class(ranges.clone()),
             RegexRepresentation::Count(inner, count) => Regex::Count(
                 Box::new(inner.to_regex()),
@@ -258,19 +258,50 @@ where
         })
 }
 
-/// Parses a count (e.g., `{3}`, `{3,5}`).
-fn parse_count<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
+/// Parses a Count::Exact (e.g., `{3}`).
+fn parse_count_exact<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     just(Token::OpenCurly)
         .ignore_then(parse_number())
-        .then(just(Token::Comma).then(parse_number()).or_not())
         .then_ignore(just(Token::CloseCurly))
-        .map(|(min, max)| Count {
-            min,
-            max: max.map(|(_, max)| max),
-        })
+        .map(|n| Count::Exact(n))
+}
+
+/// Parses a Count::Range (e.g., `{3,5}`).
+fn parse_count_range<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
+where
+    I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
+{
+    just(Token::OpenCurly)
+        .ignore_then(parse_number())
+        .then_ignore(just(Token::Comma))
+        .then(parse_number())
+        .then_ignore(just(Token::CloseCurly))
+        .map(|(min, max)| Count::Range(min, max))
+}
+
+/// Parses a Count::AtLeast (e.g., `{3,}`).
+fn parse_count_at_least<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
+where
+    I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
+{
+    just(Token::OpenCurly)
+        .ignore_then(parse_number())
+        .then_ignore(just(Token::Comma))
+        .then_ignore(just(Token::CloseCurly))
+        .map(|n| Count::AtLeast(n))
+}
+
+/// Parses a count (e.g., `{3}`, `{3,5}`, `{3,}`).
+fn parse_count<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
+where
+    I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
+{
+    parse_count_range()
+        .or(parse_count_at_least())
+        .or(parse_count_exact())
 }
 
 /// Parses an optional repetition operation (e.g., `*`, `+`, `?`, `{3}`, `{3,5}`, or nothing).
@@ -435,31 +466,37 @@ mod tests {
     #[test]
     fn parse_repetition_star() {
         let regex = parse_string_to_regex("a*").unwrap();
-        assert_eq!(regex, Regex::ZeroOrMore(Box::new(Regex::Literal('a'))));
+        assert_eq!(regex, Regex::Literal('a').star());
     }
 
     #[test]
     fn parse_repetition_plus() {
         let regex = parse_string_to_regex("a+").unwrap();
-        assert_eq!(regex, Regex::OneOrMore(Box::new(Regex::Literal('a'))));
+        assert_eq!(regex, Regex::Literal('a').plus());
     }
 
     #[test]
     fn parse_repetition_question() {
         let regex = parse_string_to_regex("a?").unwrap();
-        assert_eq!(regex, Regex::ZeroOrOne(Box::new(Regex::Literal('a'))));
+        assert_eq!(regex, Regex::Literal('a').optional());
     }
 
     #[test]
-    fn parse_repetition_count() {
+    fn parse_repetition_count_exact() {
         let regex = parse_string_to_regex("a{3}").unwrap();
-        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count { min: 3, max: None }));
+        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::Exact(3)));
     }
 
     #[test]
     fn parse_repetition_count_range() {
         let regex = parse_string_to_regex("a{3,5}").unwrap();
-        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count { min: 3, max: Some(5) }));
+        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::Range(3, 5)));
+    }
+
+    #[test]
+    fn parse_repetition_count_at_least() {
+        let regex = parse_string_to_regex("a{3,}").unwrap();
+        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::AtLeast(3)));
     }
 
     #[test]
@@ -488,7 +525,7 @@ mod tests {
             Box::new(Regex::Literal('b')),
             Box::new(Regex::Literal('c')),
         );
-        let star = Regex::ZeroOrMore(Box::new(bc));
+        let star = bc.star();
         let a_bc_star = Regex::Concat(
             Box::new(Regex::Literal('a')),
             Box::new(star),
@@ -529,12 +566,12 @@ mod tests {
     fn parse_alternation_complex() {
         let regex = parse_string_to_regex("a*|(bc)?").unwrap();
 
-        let a_star = Regex::ZeroOrMore(Box::new(Regex::Literal('a')));
+        let a_star = Regex::Literal('a').star();
         let bc = Regex::Concat(
             Box::new(Regex::Literal('b')),
             Box::new(Regex::Literal('c')),
         );
-        let bc_optional = Regex::ZeroOrOne(Box::new(bc));
+        let bc_optional = bc.optional();
         let a_star_or_bc_optional = Regex::Or(
             Box::new(a_star),
             Box::new(bc_optional),
@@ -552,15 +589,15 @@ mod tests {
     #[test]
     fn parse_nested_parentheses() {
         let regex = parse_string_to_regex("((a|b)*c)+").unwrap();
-        let a_or_b_star = Regex::ZeroOrMore(Box::new(Regex::Or(
+        let a_or_b_star = Regex::Or(
             Box::new(Regex::Literal('a')),
             Box::new(Regex::Literal('b')),
-        )));
+        ).star();
         let a_or_b_star_c = Regex::Concat(
             Box::new(a_or_b_star),
             Box::new(Regex::Literal('c')),
         );
-        let a_or_b_star_c_plus = Regex::OneOrMore(Box::new(a_or_b_star_c));
+        let a_or_b_star_c_plus = a_or_b_star_c.plus();
 
         assert_eq!(regex, a_or_b_star_c_plus);
     }
@@ -568,7 +605,7 @@ mod tests {
     #[test]
     fn parse_unicode() {
         let regex = parse_string_to_regex("💕+").unwrap();
-        assert_eq!(regex, Regex::OneOrMore(Box::new(Regex::Literal('💕'))));
+        assert_eq!(regex, Regex::Literal('💕').plus());
     }
 
     #[test]

@@ -139,13 +139,7 @@ impl Regex {
             Self::ZeroOrOne(_) | Self::ZeroOrMore(_) => true,
             Self::OneOrMore(inner) => inner.is_nullable_(),
             Self::Class(_) => false,
-            Self::Count(inner, quantifier) => {
-                if quantifier.min == 0 {
-                    true
-                } else {
-                    inner.is_nullable_()
-                }
-            },
+            Self::Count(inner, quantifier) => quantifier.min == 0 || inner.is_nullable_(),
         }
     }
 

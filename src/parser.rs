@@ -325,6 +325,7 @@ where
                 }).unwrap()
             });
 
+        #[allow(clippy::let_and_return)]
         let alternation = concatenation.separated_by(just(Token::Pipe))
             .at_least(1)
             .collect::<Vec<_>>()

@@ -7,6 +7,7 @@ use chumsky::{
 use lexer::Token;
 use logos::Logos;
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use once_cell::sync::Lazy;
 
 /// Represents a regex in a more convenient format for parsing. This is an intermediate representation before converting to the final `Regex` type.
@@ -359,12 +360,13 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
                 let found = error.found().map(|t| t.to_string()).unwrap_or_else(|| "end of input".to_string());
                 let expected = error.expected().map(|t| t.to_string()).collect::<Vec<_>>();
 
-                error_message.push_str(&format!(
-                    "Error at position {}: found {}, expected one of: {}\n",
+                let _ = writeln!(
+                    error_message,
+                    "Error at position {}: found {}, expected one of: {}",
                     span.start,
                     found,
                     expected.join(", ")
-                ));
+                );
             }
 
             Err(error_message)

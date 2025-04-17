@@ -6,8 +6,8 @@ use chumsky::{
 };
 use lexer::Token;
 use logos::Logos;
-use std::collections::HashMap;
-use once_cell::sync::Lazy;
+use std::{collections::HashMap, sync::LazyLock};
+use std::fmt::Write as _;
 
 /// Represents a regex in a more convenient format for parsing. This is an intermediate representation before converting to the final `Regex` type.
 #[derive(Clone)]
@@ -47,7 +47,7 @@ impl RegexRepresentation {
 }
 
 /// A map of special character sequences to their corresponding `RegexRepresentation`. For example, `\d` maps to `[0-9]`.
-static SPECIAL_CHAR_SEQUENCES: Lazy<HashMap<char, RegexRepresentation>> = Lazy::new(|| {
+static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = LazyLock::new(|| {
     let mut map = HashMap::new();
 
     // "\d" => [0-9]
@@ -83,11 +83,11 @@ where
         matches!(token, Token::At)
     })
     .filter(|token| {
-        let c = token.as_char().unwrap();
+        let c = token.as_char();
         !NON_CLASS_ESCAPE_CHARS.contains(&c)
     })
     .map(|token| {
-        token.as_char().unwrap()
+        token.as_char()
     })
 }
 
@@ -99,11 +99,11 @@ where
     just(Token::Backslash)
         .then(any())
         .filter(|(_, token): &(_, Token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             NON_CLASS_ESCAPE_CHARS.contains(&c)
         })
         .map(|(_, token)| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 
@@ -115,11 +115,11 @@ where
     just(Token::Backslash)
         .then(any().filter(|token| matches!(token, Token::Literal(_))))
         .filter(|(_, token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             SPECIAL_CHAR_SEQUENCES.contains_key(&c)
         })
         .map(|(_, token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             SPECIAL_CHAR_SEQUENCES[&c].clone()
         })
 }
@@ -146,9 +146,9 @@ where
         matches!(token, Token::Dot) ||
         matches!(token, Token::At)
     })
-    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char().unwrap()))
+    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char()))
     .map(|token| {
-        token.as_char().unwrap()
+        token.as_char()
     })
 }
 
@@ -160,11 +160,11 @@ where
     just(Token::Backslash)
         .then(any())
         .filter(|(_, token): &(_, Token)| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             CLASS_ESCAPE_CHARS.contains(&c)
         })
         .map(|(_, token)| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 
@@ -236,11 +236,11 @@ where
 {
     any().filter(|token| matches!(token, Token::Literal(_)))
         .filter(|token| {
-            let c = token.as_char().unwrap();
+            let c = token.as_char();
             c.is_ascii_digit()
         })
         .map(|token| {
-            token.as_char().unwrap()
+            token.as_char()
         })
 }
 
@@ -356,6 +356,7 @@ where
                 }).unwrap()
             });
 
+        #[allow(clippy::let_and_return)]
         let alternation = concatenation.separated_by(just(Token::Pipe))
             .at_least(1)
             .collect::<Vec<_>>()
@@ -390,12 +391,13 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
                 let found = error.found().map(|t| t.to_string()).unwrap_or_else(|| "end of input".to_string());
                 let expected = error.expected().map(|t| t.to_string()).collect::<Vec<_>>();
 
-                error_message.push_str(&format!(
-                    "Error at position {}: found {}, expected one of: {}\n",
+                let _ = writeln!(
+                    error_message,
+                    "Error at position {}: found {}, expected one of: {}",
                     span.start,
                     found,
                     expected.join(", ")
-                ));
+                );
             }
 
             Err(error_message)

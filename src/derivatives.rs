@@ -12,7 +12,7 @@ fn escape_regex_char(c: char, in_class: bool) -> String {
     };
 
     if to_escape.contains(&c) {
-        format!("\\{}", c)
+        format!("\\{c}")
     } else {
         c.to_string()
     }
@@ -38,10 +38,10 @@ impl Display for CharRange {
 
 impl CharRange {
     /// Returns `true` if the given character is in the range, otherwise returns `false`.
-    fn contains(&self, c: &char) -> bool {
+    fn contains(&self, c: char) -> bool {
         match self {
-            CharRange::Single(ch) => *ch == *c,
-            CharRange::Range(start, end) => *start <= *c && *c <= *end,
+            CharRange::Single(ch) => *ch == c,
+            CharRange::Range(start, end) => *start <= c && c <= *end,
         }
     }
 }
@@ -92,14 +92,14 @@ impl Display for Regex {
             Regex::Empty => "∅".to_string(),
             Regex::Epsilon => "ε".to_string(),
             Regex::Literal(c) => escape_regex_char(*c, false),
-            Regex::Concat(left, right) => format!("{}{}", left, right),
-            Regex::Or(left, right) => format!("({}|{})", left, right),
+            Regex::Concat(left, right) => format!("{left}{right}"),
+            Regex::Or(left, right) => format!("({left}|{right})"),
             Regex::Class(ranges) => {
-                let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<Vec<String>>().join("");
-                format!("[{}]", ranges_str)
+                let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<String>();
+                format!("[{ranges_str}]")
             }
             Regex::Count(inner, quantifier) => {
-                format!("({}){}", inner, quantifier)
+                format!("({inner}){quantifier}")
             },
         })
     }
@@ -184,7 +184,7 @@ impl Regex {
             },
             Regex::Class(ranges) => {
                 for range in ranges {
-                    if range.contains(&c) {
+                    if range.contains(c) {
                         return Regex::Epsilon;
                     }
                 }
@@ -361,6 +361,7 @@ impl Regex {
 }
 
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     // comprehensive derivative tests

@@ -1,8 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use once_cell::sync::Lazy;
 use regex;
 use rzozowski;
-use std::hint::black_box;
+use std::{hint::black_box, sync::LazyLock};
 
 struct TestPattern {
     name: &'static str,
@@ -11,7 +10,7 @@ struct TestPattern {
     invalid_string: String,
 }
 
-static TEST_PATTERNS: Lazy<[TestPattern; 14]> = Lazy::new(|| {
+static TEST_PATTERNS: LazyLock<[TestPattern; 14]> = LazyLock::new(|| {
     [
         TestPattern {
             name: "concatenation",

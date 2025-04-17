@@ -99,7 +99,7 @@ impl Display for Regex {
             Regex::ZeroOrMore(inner) => format!("({inner})*"),
             Regex::OneOrMore(inner) => format!("({inner})+"),
             Regex::Class(ranges) => {
-                let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<Vec<String>>().join("");
+                let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<String>();
                 format!("[{ranges_str}]")
             }
             Regex::Count(inner, quantifier) => {

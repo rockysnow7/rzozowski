@@ -25,20 +25,20 @@ enum RegexRepresentation {
 impl RegexRepresentation {
     fn to_regex(&self) -> Regex {
         match self {
-            RegexRepresentation::Literal(c) => Regex::Literal(*c),
-            RegexRepresentation::Concat(left, right) => Regex::Concat(
+            Self::Literal(c) => Regex::Literal(*c),
+            Self::Concat(left, right) => Regex::Concat(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Or(left, right) => Regex::Or(
+            Self::Or(left, right) => Regex::Or(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Optional(inner) => Regex::ZeroOrOne(Box::new(inner.to_regex())),
-            RegexRepresentation::Star(inner) => Regex::ZeroOrMore(Box::new(inner.to_regex())),
-            RegexRepresentation::Plus(inner) => Regex::OneOrMore(Box::new(inner.to_regex())),
-            RegexRepresentation::Class(ranges) => Regex::Class(ranges.clone()),
-            RegexRepresentation::Count(inner, count) => Regex::Count(
+            Self::Optional(inner) => Regex::ZeroOrOne(Box::new(inner.to_regex())),
+            Self::Star(inner) => Regex::ZeroOrMore(Box::new(inner.to_regex())),
+            Self::Plus(inner) => Regex::OneOrMore(Box::new(inner.to_regex())),
+            Self::Class(ranges) => Regex::Class(ranges.clone()),
+            Self::Count(inner, count) => Regex::Count(
                 Box::new(inner.to_regex()),
                 *count,
             ),
@@ -325,16 +325,16 @@ where
                 }).unwrap()
             });
 
-        let alternation = concatenation.separated_by(just(Token::Pipe))
+        
+
+        concatenation.separated_by(just(Token::Pipe))
             .at_least(1)
             .collect::<Vec<_>>()
             .map(|regexes| {
                 regexes.into_iter().reduce(|acc, regex| {
                     RegexRepresentation::Or(Box::new(acc), Box::new(regex))
                 }).unwrap()
-            });
-
-        alternation
+            })
     })
 }
 
@@ -373,7 +373,7 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
 }
 
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn parse_literal() {

@@ -1,7 +1,5 @@
 use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use regex;
-use rzozowski;
 use once_cell::sync::Lazy;
 
 struct TestPattern {

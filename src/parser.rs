@@ -25,20 +25,20 @@ enum RegexRepresentation {
 impl RegexRepresentation {
     fn to_regex(&self) -> Regex {
         match self {
-            RegexRepresentation::Literal(c) => Regex::Literal(*c),
-            RegexRepresentation::Concat(left, right) => Regex::Concat(
+            Self::Literal(c) => Regex::Literal(*c),
+            Self::Concat(left, right) => Regex::Concat(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Or(left, right) => Regex::Or(
+            Self::Or(left, right) => Regex::Or(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Optional(inner) => inner.to_regex().optional(),
-            RegexRepresentation::Star(inner) => inner.to_regex().star(),
-            RegexRepresentation::Plus(inner) => inner.to_regex().plus(),
-            RegexRepresentation::Class(ranges) => Regex::Class(ranges.clone()),
-            RegexRepresentation::Count(inner, count) => Regex::Count(
+            Self::Optional(inner) => inner.to_regex().optional(),
+            Self::Star(inner) => inner.to_regex().star(),
+            Self::Plus(inner) => inner.to_regex().plus(),
+            Self::Class(ranges) => Regex::Class(ranges.clone()),
+            Self::Count(inner, count) => Regex::Count(
                 Box::new(inner.to_regex()),
                 *count,
             ),
@@ -266,7 +266,7 @@ where
     just(Token::OpenCurly)
         .ignore_then(parse_number())
         .then_ignore(just(Token::CloseCurly))
-        .map(|n| Count::Exact(n))
+        .map(Count::Exact)
 }
 
 /// Parses a Count::Range (e.g., `{3,5}`).
@@ -291,7 +291,7 @@ where
         .ignore_then(parse_number())
         .then_ignore(just(Token::Comma))
         .then_ignore(just(Token::CloseCurly))
-        .map(|n| Count::AtLeast(n))
+        .map(Count::AtLeast)
 }
 
 /// Parses a count (e.g., `{3}`, `{3,5}`, `{3,}`).

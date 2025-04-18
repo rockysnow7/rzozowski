@@ -30,8 +30,8 @@ pub enum CharRange {
 impl Display for CharRange {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CharRange::Single(c) => write!(f, "{}", escape_regex_char(*c, true)),
-            CharRange::Range(start, end) => write!(f, "{}-{}", escape_regex_char(*start, true), escape_regex_char(*end, true)),
+            Self::Single(c) => write!(f, "{}", escape_regex_char(*c, true)),
+            Self::Range(start, end) => write!(f, "{}-{}", escape_regex_char(*start, true), escape_regex_char(*end, true)),
         }
     }
 }
@@ -40,8 +40,8 @@ impl CharRange {
     /// Returns `true` if the given character is in the range, otherwise returns `false`.
     fn contains(&self, c: char) -> bool {
         match self {
-            CharRange::Single(ch) => *ch == c,
-            CharRange::Range(start, end) => *start <= c && c <= *end,
+            Self::Single(ch) => *ch == c,
+            Self::Range(start, end) => *start <= c && c <= *end,
         }
     }
 }
@@ -60,21 +60,21 @@ pub enum Count {
 impl Display for Count {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Count::Exact(n) => write!(f, "{{{}}}", n),
-            Count::Range(min, max) => {
+            Self::Exact(n) => write!(f, "{{{n}}}"),
+            Self::Range(min, max) => {
                 if *min == 0 && *max == 1 {
                     write!(f, "?")
                 } else {
-                    write!(f, "{{{},{}}}", min, max)
+                    write!(f, "{{{min},{max}}}")
                 }
             },
-            Count::AtLeast(min) => {
+            Self::AtLeast(min) => {
                 if *min == 0 {
                     write!(f, "*")
                 } else if *min == 1 {
                     write!(f, "+")
                 } else {
-                    write!(f, "{{{},}}", min)
+                    write!(f, "{{{min},}}")
                 }
             },
         }
@@ -103,16 +103,16 @@ pub enum Regex {
 impl Display for Regex {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
-            Regex::Empty => "∅".to_string(),
-            Regex::Epsilon => "ε".to_string(),
-            Regex::Literal(c) => escape_regex_char(*c, false),
-            Regex::Concat(left, right) => format!("{left}{right}"),
-            Regex::Or(left, right) => format!("({left}|{right})"),
-            Regex::Class(ranges) => {
+            Self::Empty => "∅".to_string(),
+            Self::Epsilon => "ε".to_string(),
+            Self::Literal(c) => escape_regex_char(*c, false),
+            Self::Concat(left, right) => format!("{left}{right}"),
+            Self::Or(left, right) => format!("({left}|{right})"),
+            Self::Class(ranges) => {
                 let ranges_str = ranges.iter().map(|range| range.to_string()).collect::<String>();
                 format!("[{ranges_str}]")
             }
-            Regex::Count(inner, quantifier) => {
+            Self::Count(inner, quantifier) => {
                 format!("({inner}){quantifier}")
             },
         })
@@ -120,22 +120,22 @@ impl Display for Regex {
 }
 
 impl Regex {
-    pub fn star(&self) -> Regex {
-        Regex::Count(
+    pub fn star(&self) -> Self {
+        Self::Count(
             Box::new(self.clone()),
             Count::AtLeast(0),
         )
     }
 
-    pub fn plus(&self) -> Regex {
-        Regex::Count(
+    pub fn plus(&self) -> Self {
+        Self::Count(
             Box::new(self.clone()),
             Count::AtLeast(1),
         )
     }
 
-    pub fn optional(&self) -> Regex {
-        Regex::Count(
+    pub fn optional(&self) -> Self {
+        Self::Count(
             Box::new(self.clone()),
             Count::Range(0, 1),
         )
@@ -143,13 +143,13 @@ impl Regex {
 
     fn is_nullable_(&self) -> bool {
         match self {
-            Regex::Empty => false,
-            Regex::Epsilon => true,
-            Regex::Literal(_) => false,
-            Regex::Concat(left, right) => left.is_nullable_() && right.is_nullable_(),
-            Regex::Or(left, right) => left.is_nullable_() || right.is_nullable_(),
-            Regex::Class(_) => false,
-            Regex::Count(_, quantifier) => {
+            Self::Empty => false,
+            Self::Epsilon => true,
+            Self::Literal(_) => false,
+            Self::Concat(left, right) => left.is_nullable_() && right.is_nullable_(),
+            Self::Or(left, right) => left.is_nullable_() || right.is_nullable_(),
+            Self::Class(_) => false,
+            Self::Count(_, quantifier) => {
                 match quantifier {
                     Count::Exact(n) => *n == 0,
                     Count::Range(min, _) | Count::AtLeast(min) => *min == 0,
@@ -159,103 +159,103 @@ impl Regex {
     }
 
     /// If the regex is nullable, returns `Regex::Epsilon`, otherwise returns `Regex::Empty`.
-    pub fn is_nullable(&self) -> Regex {
+    pub fn is_nullable(&self) -> Self {
         if self.is_nullable_() {
-            Regex::Epsilon
+            Self::Epsilon
         } else {
-            Regex::Empty
+            Self::Empty
         }
     }
 
     /// Returns the Brzozowski derivative of the regex with respect to a given character.
-    pub fn derivative(&self, c: char) -> Regex {
+    pub fn derivative(&self, c: char) -> Self {
         match self {
-            Regex::Empty | Regex::Epsilon => Regex::Empty,
-            Regex::Literal(ch) => {
+            Self::Empty | Self::Epsilon => Self::Empty,
+            Self::Literal(ch) => {
                 if *ch == c {
-                    Regex::Epsilon
+                    Self::Epsilon
                 } else {
-                    Regex::Empty
+                    Self::Empty
                 }
             },
-            Regex::Concat(left, right) => {
-                Regex::Or(
-                    Box::new(Regex::Concat(
+            Self::Concat(left, right) => {
+                Self::Or(
+                    Box::new(Self::Concat(
                         Box::new(left.derivative(c)),
                         right.clone(),
                     ).simplify()),
-                    Box::new(Regex::Concat(
+                    Box::new(Self::Concat(
                         Box::new(left.is_nullable()),
                         Box::new(right.derivative(c)),
                     ).simplify()),
                 )
             },
-            Regex::Or(left, right) => {
-                Regex::Or(
+            Self::Or(left, right) => {
+                Self::Or(
                     Box::new(left.derivative(c)),
                     Box::new(right.derivative(c)),
                 )
             },
-            Regex::Class(ranges) => {
+            Self::Class(ranges) => {
                 for range in ranges {
                     if range.contains(c) {
-                        return Regex::Epsilon;
+                        return Self::Epsilon;
                     }
                 }
-                Regex::Empty
+                Self::Empty
             },
-            Regex::Count(inner, count) => {
+            Self::Count(inner, count) => {
                 let new_count = match count {
                     Count::Exact(n) => Count::Exact(n.saturating_sub(1)),
                     Count::Range(min, max) => Count::Range(min.saturating_sub(1), max.saturating_sub(1)),
                     Count::AtLeast(min) => Count::AtLeast(min.saturating_sub(1)),
                 };
 
-                Regex::Concat(
+                Self::Concat(
                     Box::new(inner.derivative(c)),
-                    Box::new(Regex::Count(inner.clone(), new_count)),
+                    Box::new(Self::Count(inner.clone(), new_count)),
                 )
             }
         }.simplify()
     }
 
     /// Simplifies the regex.
-    pub fn simplify(&self) -> Regex {
+    pub fn simplify(&self) -> Self {
         match self {
-            Regex::Empty => Regex::Empty,
-            Regex::Epsilon => Regex::Epsilon,
-            Regex::Literal(c) => Regex::Literal(*c),
-            Regex::Concat(left, right) => {
+            Self::Empty => Self::Empty,
+            Self::Epsilon => Self::Epsilon,
+            Self::Literal(c) => Self::Literal(*c),
+            Self::Concat(left, right) => {
                 let left_simplified = left.simplify();
                 let right_simplified = right.simplify();
 
                 // r∅ = ∅r = ∅
-                if left_simplified == Regex::Empty || right_simplified == Regex::Empty {
-                    return Regex::Empty;
+                if left_simplified == Self::Empty || right_simplified == Self::Empty {
+                    return Self::Empty;
                 }
 
                 // εr = rε = r
-                if left_simplified == Regex::Epsilon {
+                if left_simplified == Self::Epsilon {
                     return right_simplified;
                 }
-                if right_simplified == Regex::Epsilon {
+                if right_simplified == Self::Epsilon {
                     return left_simplified;
                 }
 
-                Regex::Concat(
+                Self::Concat(
                     Box::new(left_simplified),
                     Box::new(right_simplified),
                 )
             },
-            Regex::Or(left, right) => {
+            Self::Or(left, right) => {
                 let left_simplified = left.simplify();
                 let right_simplified = right.simplify();
 
                 // r ∪ ∅ = ∅ ∪ r = r
-                if left_simplified == Regex::Empty {
+                if left_simplified == Self::Empty {
                     return right_simplified;
                 }
-                if right_simplified == Regex::Empty {
+                if right_simplified == Self::Empty {
                     return left_simplified;
                 }
 
@@ -264,12 +264,12 @@ impl Regex {
                     return left_simplified;
                 }
 
-                Regex::Or(
+                Self::Or(
                     Box::new(left_simplified),
                     Box::new(right_simplified),
                 )
             },
-            Regex::Class(ranges) => {
+            Self::Class(ranges) => {
                 let mut new_ranges = Vec::new();
                 let mut changed = false;
                 for range in ranges {
@@ -286,12 +286,12 @@ impl Regex {
                 }
 
                 if changed {
-                    return Regex::Class(new_ranges).simplify();
+                    return Self::Class(new_ranges).simplify();
                 }
 
                 if ranges.len() == 1 {
                     if let CharRange::Single(c) = ranges[0] {
-                        return Regex::Literal(c);
+                        return Self::Literal(c);
                     }
                 }
 
@@ -300,45 +300,45 @@ impl Regex {
                     CharRange::Single(c) => *c,
                     CharRange::Range(start, _) => *start,
                 });
-                Regex::Class(new_ranges)
+                Self::Class(new_ranges)
             },
-            Regex::Count(inner, count) => {
+            Self::Count(inner, count) => {
                 let inner_simplified = inner.simplify();
 
                 // ∅* = ε* = ε
                 if let Count::AtLeast(0) = count {
-                    if inner_simplified == Regex::Empty {
-                        return Regex::Epsilon;
+                    if inner_simplified == Self::Empty {
+                        return Self::Epsilon;
                     }
                 }
 
                 // (r*)* = r*
                 if let Count::AtLeast(0) = count {
-                    if let Regex::Count(_, Count::AtLeast(0)) = inner_simplified {
+                    if let Self::Count(_, Count::AtLeast(0)) = inner_simplified {
                         return inner_simplified;
                     }
                 }
 
                 // (ε)+ = ε
                 if let Count::AtLeast(1) = count {
-                    if inner_simplified == Regex::Epsilon {
-                        return Regex::Epsilon;
+                    if inner_simplified == Self::Epsilon {
+                        return Self::Epsilon;
                     }
                 }
 
                 // ∅{n,m} = ∅
-                if inner_simplified == Regex::Empty {
-                    return Regex::Empty;
+                if inner_simplified == Self::Empty {
+                    return Self::Empty;
                 }
                 // ε{n,m} = ε
-                if inner_simplified == Regex::Epsilon {
-                    return Regex::Epsilon;
+                if inner_simplified == Self::Epsilon {
+                    return Self::Epsilon;
                 }
 
                 // r{n,n} = r{n}
                 if let Count::Range(min, max) = count {
                     if min == max {
-                        return Regex::Count(
+                        return Self::Count(
                             Box::new(inner_simplified),
                             Count::Exact(*min),
                         ).simplify();
@@ -347,14 +347,14 @@ impl Regex {
 
                 // r{0} = ε
                 if let Count::Exact(0) = count {
-                    return Regex::Epsilon;
+                    return Self::Epsilon;
                 }
                 // r{1} = r
                 if let Count::Exact(1) = count {
                     return inner_simplified;
                 }
 
-                Regex::Count(Box::new(inner_simplified), *count)
+                Self::Count(Box::new(inner_simplified), *count)
             },
         }
     }
@@ -369,7 +369,7 @@ impl Regex {
     }
 
     /// Tries to parse a string into a `Regex`.
-    pub fn new(s: &str) -> Result<Regex, String> {
+    pub fn new(s: &str) -> Result<Self, String> {
         parse_string_to_regex(s)
     }
 }

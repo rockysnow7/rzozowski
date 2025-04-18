@@ -48,14 +48,13 @@ impl RegexRepresentation {
 
 /// A map of special character sequences to their corresponding `RegexRepresentation`. For example, `\d` maps to `[0-9]`.
 static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
+    HashMap::from([
+        // "\d" => [0-9]
+        ('d', RegexRepresentation::Class(vec![CharRange::Range('0', '9')])),
+        // "\w" => [a-zA-Z0-9_]
+        ('w', RegexRepresentation::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9'), CharRange::Single('_')]))
+    ])
 
-    // "\d" => [0-9]
-    map.insert('d', RegexRepresentation::Class(vec![CharRange::Range('0', '9')]));
-    // "\w" => [a-zA-Z0-9_]
-    map.insert('w', RegexRepresentation::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9'), CharRange::Single('_')]));
-
-    map
 });
 
 fn tokenize_string(input: &str) -> Result<Vec<Token>, String> {

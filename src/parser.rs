@@ -74,10 +74,7 @@ fn unescaped_char<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a, Token
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token| {
-        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
-    })
-    .filter(|token| {
+    any().filter(|token: &Token| {
         let c = token.as_char();
         !NON_CLASS_ESCAPE_CHARS.contains(&c)
     })
@@ -597,6 +594,18 @@ mod tests {
     fn parse_unicode() {
         let regex = parse_string_to_regex("💕+").unwrap();
         assert_eq!(regex, Regex::Literal('💕').plus());
+    }
+
+    #[test]
+    fn parse_hyphen() {
+        let regex = parse_string_to_regex("a-z").unwrap();
+        assert_eq!(regex, Regex::Concat(
+            Box::new(Regex::Concat(
+                Box::new(Regex::Literal('a')),
+                Box::new(Regex::Literal('-')),
+            )),
+            Box::new(Regex::Literal('z')),
+        ));
     }
 
     #[test]

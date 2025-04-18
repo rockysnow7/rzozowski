@@ -48,7 +48,7 @@ Install with `cargo add rzozowski` or add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rzozowski = "0.1.2"
+rzozowski = "0.1.3"
 ```
 
 Usage is very simple. *rzozowski* allows you to:

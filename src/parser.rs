@@ -13,32 +13,32 @@ use std::fmt::Write as _;
 #[derive(Clone)]
 enum RegexRepresentation {
     Literal(char),
-    Concat(Box<RegexRepresentation>, Box<RegexRepresentation>),
-    Or(Box<RegexRepresentation>, Box<RegexRepresentation>),
-    Optional(Box<RegexRepresentation>),
-    Star(Box<RegexRepresentation>),
-    Plus(Box<RegexRepresentation>),
+    Concat(Box<Self>, Box<Self>),
+    Or(Box<Self>, Box<Self>),
+    Optional(Box<Self>),
+    Star(Box<Self>),
+    Plus(Box<Self>),
     Class(Vec<CharRange>),
-    Count(Box<RegexRepresentation>, Count),
+    Count(Box<Self>, Count),
 }
 
 impl RegexRepresentation {
     fn to_regex(&self) -> Regex {
         match self {
-            RegexRepresentation::Literal(c) => Regex::Literal(*c),
-            RegexRepresentation::Concat(left, right) => Regex::Concat(
+            Self::Literal(c) => Regex::Literal(*c),
+            Self::Concat(left, right) => Regex::Concat(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Or(left, right) => Regex::Or(
+            Self::Or(left, right) => Regex::Or(
                 Box::new(left.to_regex()),
                 Box::new(right.to_regex()),
             ),
-            RegexRepresentation::Optional(inner) => inner.to_regex().optional(),
-            RegexRepresentation::Star(inner) => inner.to_regex().star(),
-            RegexRepresentation::Plus(inner) => inner.to_regex().plus(),
-            RegexRepresentation::Class(ranges) => Regex::Class(ranges.clone()),
-            RegexRepresentation::Count(inner, count) => Regex::Count(
+            Self::Optional(inner) => inner.to_regex().optional(),
+            Self::Star(inner) => inner.to_regex().star(),
+            Self::Plus(inner) => inner.to_regex().plus(),
+            Self::Class(ranges) => Regex::Class(ranges.clone()),
+            Self::Count(inner, count) => Regex::Count(
                 Box::new(inner.to_regex()),
                 *count,
             ),
@@ -48,14 +48,13 @@ impl RegexRepresentation {
 
 /// A map of special character sequences to their corresponding `RegexRepresentation`. For example, `\d` maps to `[0-9]`.
 static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
+    HashMap::from([
+        // "\d" => [0-9]
+        ('d', RegexRepresentation::Class(vec![CharRange::Range('0', '9')])),
+        // "\w" => [a-zA-Z0-9_]
+        ('w', RegexRepresentation::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9'), CharRange::Single('_')]))
+    ])
 
-    // "\d" => [0-9]
-    map.insert('d', RegexRepresentation::Class(vec![CharRange::Range('0', '9')]));
-    // "\w" => [a-zA-Z0-9_]
-    map.insert('w', RegexRepresentation::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9'), CharRange::Single('_')]));
-
-    map
 });
 
 fn tokenize_string(input: &str) -> Result<Vec<Token>, String> {
@@ -76,11 +75,7 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     any().filter(|token| {
-        matches!(token, Token::Literal(_)) ||
-        matches!(token, Token::Percent) ||
-        matches!(token, Token::Plus) ||
-        matches!(token, Token::Dot) ||
-        matches!(token, Token::At)
+        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
     })
     .filter(|token| {
         let c = token.as_char();
@@ -140,11 +135,7 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     any().filter(|token| {
-        matches!(token, Token::Literal(_)) ||
-        matches!(token, Token::Percent) ||
-        matches!(token, Token::Plus) ||
-        matches!(token, Token::Dot) ||
-        matches!(token, Token::At)
+        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
     })
     .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char()))
     .map(|token| {
@@ -266,7 +257,7 @@ where
     just(Token::OpenCurly)
         .ignore_then(parse_number())
         .then_ignore(just(Token::CloseCurly))
-        .map(|n| Count::Exact(n))
+        .map(Count::Exact)
 }
 
 /// Parses a Count::Range (e.g., `{3,5}`).
@@ -291,7 +282,7 @@ where
         .ignore_then(parse_number())
         .then_ignore(just(Token::Comma))
         .then_ignore(just(Token::CloseCurly))
-        .map(|n| Count::AtLeast(n))
+        .map(Count::AtLeast)
 }
 
 /// Parses a count (e.g., `{3}`, `{3,5}`, `{3,}`).

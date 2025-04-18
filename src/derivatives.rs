@@ -38,7 +38,7 @@ impl Display for CharRange {
 
 impl CharRange {
     /// Returns `true` if the given character is in the range, otherwise returns `false`.
-    fn contains(&self, c: char) -> bool {
+    const fn contains(&self, c: char) -> bool {
         match self {
             Self::Single(ch) => *ch == c,
             Self::Range(start, end) => *start <= c && c <= *end,

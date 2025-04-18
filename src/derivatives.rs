@@ -91,13 +91,13 @@ pub enum Regex {
     /// A regex that matches a single character (e.g., `a`).
     Literal(char),
     /// A regex that matches a concatenation of two regexes (e.g., `ab`).
-    Concat(Box<Regex>, Box<Regex>),
+    Concat(Box<Self>, Box<Self>),
     /// A regex that matches an alternation of two regexes (e.g., `a|b`).
-    Or(Box<Regex>, Box<Regex>),
+    Or(Box<Self>, Box<Self>),
     /// A regex that matches any character in the given character class (e.g., `[a-z]`).
     Class(Vec<CharRange>),
     /// A regex that matches a given regex a specified number of times (e.g., `a{3}` or `a{3,5}`).
-    Count(Box<Regex>, Count),
+    Count(Box<Self>, Count),
 }
 
 impl Display for Regex {

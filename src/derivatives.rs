@@ -504,7 +504,7 @@ mod tests {
             ).star()),
             Box::new(Regex::Literal('d'))
         ));
-        
+
         // Take derivative with respect to 'b'
         let d2 = d1.derivative('b');
         assert_eq!(d2, Regex::Concat(
@@ -514,7 +514,7 @@ mod tests {
             ).star()),
             Box::new(Regex::Literal('d'))
         ));
-        
+
         // Take derivative with respect to 'd'
         let d3 = d2.derivative('d');
         assert_eq!(d3, Regex::Epsilon);
@@ -526,19 +526,19 @@ mod tests {
         let regex = Regex::Empty;
         assert_eq!(regex.simplify(), Regex::Empty);
     }
-    
+
     #[test]
     fn test_simplify_epsilon() {
         let regex = Regex::Epsilon;
         assert_eq!(regex.simplify(), Regex::Epsilon);
     }
-    
+
     #[test]
     fn test_simplify_literal() {
         let regex = Regex::Literal('a');
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
-    
+
     #[test]
     fn test_simplify_concat_with_empty() {
         // r∅ = ∅
@@ -547,7 +547,7 @@ mod tests {
             Box::new(Regex::Empty)
         );
         assert_eq!(regex.simplify(), Regex::Empty);
-        
+
         // ∅r = ∅
         let regex = Regex::Concat(
             Box::new(Regex::Empty),
@@ -555,7 +555,7 @@ mod tests {
         );
         assert_eq!(regex.simplify(), Regex::Empty);
     }
-    
+
     #[test]
     fn test_simplify_concat_with_epsilon() {
         // rε = r
@@ -564,7 +564,7 @@ mod tests {
             Box::new(Regex::Epsilon)
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
-        
+
         // εr = r
         let regex = Regex::Concat(
             Box::new(Regex::Epsilon),
@@ -572,7 +572,7 @@ mod tests {
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
-    
+
     #[test]
     fn test_simplify_or_with_empty() {
         // r ∪ ∅ = r
@@ -581,7 +581,7 @@ mod tests {
             Box::new(Regex::Empty)
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
-        
+
         // ∅ ∪ r = r
         let regex = Regex::Or(
             Box::new(Regex::Empty),
@@ -589,7 +589,7 @@ mod tests {
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
-    
+
     #[test]
     fn test_simplify_or_with_same() {
         // r ∪ r = r
@@ -599,7 +599,7 @@ mod tests {
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
-    
+
     #[test]
     fn test_simplify_zero_or_more() {
         // ∅* = ε
@@ -615,7 +615,7 @@ mod tests {
         let regex = inner.star();
         assert_eq!(regex.simplify(), inner);
     }
-    
+
     #[test]
     fn test_simplify_one_or_more() {
         // ε+ = ε
@@ -628,11 +628,11 @@ mod tests {
         // Single char class to literal
         let regex = Regex::Class(vec![CharRange::Single('a')]);
         assert_eq!(regex.simplify(), Regex::Literal('a'));
-        
+
         // Range with same start and end becomes single
         let regex = Regex::Class(vec![CharRange::Range('a', 'a')]);
         assert_eq!(regex.simplify(), Regex::Literal('a'));
-        
+
         // Test sorting
         let regex = Regex::Class(vec![
             CharRange::Single('c'),
@@ -645,7 +645,7 @@ mod tests {
             CharRange::Range('d', 'f')
         ]));
     }
-    
+
     #[test]
     fn test_simplify_count() {
         // ∅{n} = ∅
@@ -706,7 +706,7 @@ mod tests {
             Count::Exact(0),
         );
         assert_eq!(regex.simplify(), Regex::Epsilon);
-        
+
         // r{1} = r
         let regex = Regex::Count(
             Box::new(Regex::Literal('a')),
@@ -714,7 +714,7 @@ mod tests {
         );
         assert_eq!(regex.simplify(), Regex::Literal('a'));
     }
-    
+
     #[test]
     fn test_complex_simplification() {
         // (a|∅)(ε|b*)
@@ -728,7 +728,7 @@ mod tests {
                 Box::new(Regex::Literal('b').star())
             ))
         );
-        
+
         // Should simplify to a(ε|b*) which further simplifies to a
         let simplified = regex.simplify();
         assert_eq!(simplified, Regex::Concat(
@@ -804,7 +804,7 @@ mod tests {
         assert!(regex.matches("aaa"));
         assert!(!regex.matches("aaaa"));
     }
-    
+
     #[test]
     fn test_matches_count_single() {
         let regex = Regex::Count(

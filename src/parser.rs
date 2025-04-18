@@ -249,7 +249,7 @@ where
         })
 }
 
-/// Parses a Count::Exact (e.g., `{3}`).
+/// Parses a `Count::Exact` (e.g., `{3}`).
 fn parse_count_exact<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
@@ -260,7 +260,7 @@ where
         .map(Count::Exact)
 }
 
-/// Parses a Count::Range (e.g., `{3,5}`).
+/// Parses a `Count::Range` (e.g., `{3,5}`).
 fn parse_count_range<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
@@ -273,7 +273,7 @@ where
         .map(|(min, max)| Count::Range(min, max))
 }
 
-/// Parses a Count::AtLeast (e.g., `{3,}`).
+/// Parses a `Count::AtLeast` (e.g., `{3,}`).
 fn parse_count_at_least<'a, I>() -> impl Parser<'a, I, Count, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,

@@ -46,7 +46,7 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn as_char(&self) -> char {
+    pub const fn as_char(&self) -> char {
         match self {
             Self::Literal(c) => *c,
             Self::OpenParen => '(',

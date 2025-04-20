@@ -394,6 +394,10 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
 }
 
 mod tests {
+    // Not quite sure why this triggers here, possibly the include is too "broad"
+    // The code fails to compile without the use statement, yet clippy isn't happy about it being
+    // there.
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

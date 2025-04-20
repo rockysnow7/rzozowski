@@ -1,9 +1,8 @@
 #![deny(
     unsafe_code,
     clippy::undocumented_unsafe_blocks,
-    clippy::multiple_unsafe_ops_per_block,
+    clippy::multiple_unsafe_ops_per_block
 )]
-
 #![warn(
     clippy::cognitive_complexity,
     clippy::dbg_macro,
@@ -54,4 +53,4 @@
 mod derivatives;
 mod parser;
 
-pub use derivatives::{Regex, Count, CharRange};
+pub use derivatives::{CharRange, Count, Regex};

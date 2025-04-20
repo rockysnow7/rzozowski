@@ -2,12 +2,13 @@ mod lexer;
 
 use crate::derivatives::{CharRange, Count, Regex, CLASS_ESCAPE_CHARS, NON_CLASS_ESCAPE_CHARS};
 use chumsky::{
-    input::{Stream, ValueInput}, prelude::*
+    input::{Stream, ValueInput},
+    prelude::*,
 };
 use lexer::Token;
 use logos::Logos;
-use std::{collections::HashMap, sync::LazyLock};
 use std::fmt::Write as _;
+use std::{collections::HashMap, sync::LazyLock};
 
 /// Represents a regex in a more convenient format for parsing. This is an intermediate representation before converting to the final `Regex` type.
 #[derive(Clone)]
@@ -26,22 +27,17 @@ impl RegexRepresentation {
     fn to_regex(&self) -> Regex {
         match self {
             Self::Literal(c) => Regex::Literal(*c),
-            Self::Concat(left, right) => Regex::Concat(
-                Box::new(left.to_regex()),
-                Box::new(right.to_regex()),
-            ),
-            Self::Or(left, right) => Regex::Or(
-                Box::new(left.to_regex()),
-                Box::new(right.to_regex()),
-            ),
+            Self::Concat(left, right) => {
+                Regex::Concat(Box::new(left.to_regex()), Box::new(right.to_regex()))
+            }
+            Self::Or(left, right) => {
+                Regex::Or(Box::new(left.to_regex()), Box::new(right.to_regex()))
+            }
             Self::Optional(inner) => inner.to_regex().optional(),
             Self::Star(inner) => inner.to_regex().star(),
             Self::Plus(inner) => inner.to_regex().plus(),
             Self::Class(ranges) => Regex::Class(ranges.clone()),
-            Self::Count(inner, count) => Regex::Count(
-                Box::new(inner.to_regex()),
-                *count,
-            ),
+            Self::Count(inner, count) => Regex::Count(Box::new(inner.to_regex()), *count),
         }
     }
 }
@@ -50,16 +46,27 @@ impl RegexRepresentation {
 static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = LazyLock::new(|| {
     HashMap::from([
         // "\d" => [0-9]
-        ('d', RegexRepresentation::Class(vec![CharRange::Range('0', '9')])),
+        (
+            'd',
+            RegexRepresentation::Class(vec![CharRange::Range('0', '9')]),
+        ),
         // "\w" => [a-zA-Z0-9_]
-        ('w', RegexRepresentation::Class(vec![CharRange::Range('a', 'z'), CharRange::Range('A', 'Z'), CharRange::Range('0', '9'), CharRange::Single('_')]))
+        (
+            'w',
+            RegexRepresentation::Class(vec![
+                CharRange::Range('a', 'z'),
+                CharRange::Range('A', 'Z'),
+                CharRange::Range('0', '9'),
+                CharRange::Single('_'),
+            ]),
+        ),
     ])
-
 });
 
 fn tokenize_string(input: &str) -> Result<Vec<Token>, String> {
     let lexer = Token::lexer(input);
-    let tokens = lexer.collect::<Result<Vec<_>, _>>()
+    let tokens = lexer
+        .collect::<Result<Vec<_>, _>>()
         .map_err(|_| "Invalid token in input".to_string())?;
 
     if tokens.is_empty() {
@@ -74,13 +81,12 @@ fn unescaped_char<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a, Token
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token: &Token| {
-        let c = token.as_char();
-        !NON_CLASS_ESCAPE_CHARS.contains(&c)
-    })
-    .map(|token| {
-        token.as_char()
-    })
+    any()
+        .filter(|token: &Token| {
+            let c = token.as_char();
+            !NON_CLASS_ESCAPE_CHARS.contains(&c)
+        })
+        .map(|token| token.as_char())
 }
 
 /// Parses an escaped character (e.g., `\[`).
@@ -94,13 +100,12 @@ where
             let c = token.as_char();
             NON_CLASS_ESCAPE_CHARS.contains(&c)
         })
-        .map(|(_, token)| {
-            token.as_char()
-        })
+        .map(|(_, token)| token.as_char())
 }
 
 /// Parses a special character sequence (e.g., `\d`).
-fn special_char_sequence<'a, I>() -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>
+fn special_char_sequence<'a, I>(
+) -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
@@ -121,7 +126,8 @@ fn literal<'a, I>() -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    special_char_sequence().boxed()
+    special_char_sequence()
+        .boxed()
         .or(escaped_char().map(RegexRepresentation::Literal))
         .or(unescaped_char().map(RegexRepresentation::Literal))
 }
@@ -131,13 +137,15 @@ fn class_unescaped_char<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a,
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token| {
-        matches!(token, Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At)
-    })
-    .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char()))
-    .map(|token| {
-        token.as_char()
-    })
+    any()
+        .filter(|token| {
+            matches!(
+                token,
+                Token::Literal(_) | Token::Percent | Token::Plus | Token::Dot | Token::At
+            )
+        })
+        .filter(|token| !CLASS_ESCAPE_CHARS.contains(&token.as_char()))
+        .map(|token| token.as_char())
 }
 
 /// Parses an escaped character that is not a special character sequence (e.g., `\[`, `\]`, `\-`).
@@ -151,9 +159,7 @@ where
             let c = token.as_char();
             CLASS_ESCAPE_CHARS.contains(&c)
         })
-        .map(|(_, token)| {
-            token.as_char()
-        })
+        .map(|(_, token)| token.as_char())
 }
 
 /// Parses a class character.
@@ -177,7 +183,8 @@ fn class_range_range<'a, I>() -> impl Parser<'a, I, CharRange, extra::Err<Rich<'
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    class_char().then_ignore(just(Token::Hyphen))
+    class_char()
+        .then_ignore(just(Token::Hyphen))
         .then(class_char())
         .map(|(start, end)| CharRange::Range(start, end))
 }
@@ -195,14 +202,17 @@ fn class<'a, I>() -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a,
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    class_range().repeated()
+    class_range()
+        .repeated()
         .collect::<Vec<_>>()
         .delimited_by(just(Token::OpenBracket), just(Token::CloseBracket))
         .map(RegexRepresentation::Class)
 }
 
 /// Parses a parenthesized expression (e.g., `(a)`, `(a|b)`, `(a*)`, `(a+)`, `(a?)`).
-fn parenthesized<'a, I>(regex: impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>) -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>
+fn parenthesized<'a, I>(
+    regex: impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>,
+) -> impl Parser<'a, I, RegexRepresentation, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
@@ -222,14 +232,13 @@ fn parse_digit<'a, I>() -> impl Parser<'a, I, char, extra::Err<Rich<'a, Token>>>
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
-    any().filter(|token| matches!(token, Token::Literal(_)))
+    any()
+        .filter(|token| matches!(token, Token::Literal(_)))
         .filter(|token| {
             let c = token.as_char();
             c.is_ascii_digit()
         })
-        .map(|token| {
-            token.as_char()
-        })
+        .map(|token| token.as_char())
 }
 
 /// Parses a number (e.g., `3`, `42`).
@@ -241,9 +250,7 @@ where
         .repeated()
         .at_least(1)
         .collect::<Vec<_>>()
-        .map(|digits| {
-            digits.iter().collect::<String>().parse::<usize>().unwrap()
-        })
+        .map(|digits| digits.iter().collect::<String>().parse::<usize>().unwrap())
 }
 
 /// Parses a `Count::Exact` (e.g., `{3}`).
@@ -293,7 +300,8 @@ where
 }
 
 /// Parses an optional repetition operation (e.g., `*`, `+`, `?`, `{3}`, `{3,5}`, or nothing).
-fn parse_repetition<'a, I>() -> impl Parser<'a, I, Option<RepetitionKind>, extra::Err<Rich<'a, Token>>> + Clone
+fn parse_repetition<'a, I>(
+) -> impl Parser<'a, I, Option<RepetitionKind>, extra::Err<Rich<'a, Token>>> + Clone
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
@@ -303,9 +311,7 @@ where
         Token::Question => Some(RepetitionKind::ZeroOrOne),
     };
 
-    let count_repetition = parse_count()
-        .map(RepetitionKind::Count)
-        .map(Some);
+    let count_repetition = parse_count().map(RepetitionKind::Count).map(Some);
 
     count_repetition
         .or(simple_repetition)
@@ -318,20 +324,21 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     recursive(|regex| {
-        let atom = literal().boxed()
+        let atom = literal()
+            .boxed()
             .or(class().boxed())
             .or(parenthesized(regex).boxed());
 
         let repetition = atom
             .then(parse_repetition())
-            .map(|(atom, repetition)| {
-                match repetition {
-                    Some(RepetitionKind::ZeroOrOne) => RegexRepresentation::Optional(Box::new(atom)),
-                    Some(RepetitionKind::ZeroOrMore) => RegexRepresentation::Star(Box::new(atom)),
-                    Some(RepetitionKind::OneOrMore) => RegexRepresentation::Plus(Box::new(atom)),
-                    Some(RepetitionKind::Count(count)) => RegexRepresentation::Count(Box::new(atom), count),
-                    None => atom,
+            .map(|(atom, repetition)| match repetition {
+                Some(RepetitionKind::ZeroOrOne) => RegexRepresentation::Optional(Box::new(atom)),
+                Some(RepetitionKind::ZeroOrMore) => RegexRepresentation::Star(Box::new(atom)),
+                Some(RepetitionKind::OneOrMore) => RegexRepresentation::Plus(Box::new(atom)),
+                Some(RepetitionKind::Count(count)) => {
+                    RegexRepresentation::Count(Box::new(atom), count)
                 }
+                None => atom,
             });
 
         let concatenation = repetition
@@ -339,19 +346,24 @@ where
             .at_least(1)
             .collect::<Vec<_>>()
             .map(|regexes| {
-                regexes.into_iter().reduce(|acc, regex| {
-                    RegexRepresentation::Concat(Box::new(acc), Box::new(regex))
-                }).unwrap()
+                regexes
+                    .into_iter()
+                    .reduce(|acc, regex| {
+                        RegexRepresentation::Concat(Box::new(acc), Box::new(regex))
+                    })
+                    .unwrap()
             });
 
         #[allow(clippy::let_and_return)]
-        let alternation = concatenation.separated_by(just(Token::Pipe))
+        let alternation = concatenation
+            .separated_by(just(Token::Pipe))
             .at_least(1)
             .collect::<Vec<_>>()
             .map(|regexes| {
-                regexes.into_iter().reduce(|acc, regex| {
-                    RegexRepresentation::Or(Box::new(acc), Box::new(regex))
-                }).unwrap()
+                regexes
+                    .into_iter()
+                    .reduce(|acc, regex| RegexRepresentation::Or(Box::new(acc), Box::new(regex)))
+                    .unwrap()
             });
 
         alternation
@@ -366,9 +378,7 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
         return Err("Empty input not allowed".to_string());
     }
 
-    let result = parser()
-        .parse(Stream::from_iter(tokens))
-        .into_result();
+    let result = parser().parse(Stream::from_iter(tokens)).into_result();
 
     match result {
         Ok(regex) => Ok(regex.to_regex().simplify()),
@@ -376,7 +386,10 @@ pub fn parse_string_to_regex(input: &str) -> Result<Regex, String> {
             let mut error_message = String::new();
             for error in errors {
                 let span = error.span();
-                let found = error.found().map(|t| t.to_string()).unwrap_or_else(|| "end of input".to_string());
+                let found = error
+                    .found()
+                    .map(|t| t.to_string())
+                    .unwrap_or_else(|| "end of input".to_string());
                 let expected = error.expected().map(|t| t.to_string()).collect::<Vec<_>>();
 
                 let _ = writeln!(
@@ -427,20 +440,24 @@ mod tests {
     #[test]
     fn parse_character_class_long() {
         let regex = parse_string_to_regex("[a-zA-Z0-9]").unwrap();
-        assert_eq!(regex, Regex::Class(vec![
-            CharRange::Range('a', 'z'),
-            CharRange::Range('A', 'Z'),
-            CharRange::Range('0', '9'),
-        ]).simplify());
+        assert_eq!(
+            regex,
+            Regex::Class(vec![
+                CharRange::Range('a', 'z'),
+                CharRange::Range('A', 'Z'),
+                CharRange::Range('0', '9'),
+            ])
+            .simplify()
+        );
     }
 
     #[test]
     fn parse_character_class_mixed() {
         let regex = parse_string_to_regex("[a-zA]").unwrap();
-        assert_eq!(regex, Regex::Class(vec![
-            CharRange::Range('a', 'z'),
-            CharRange::Single('A'),
-        ]).simplify());
+        assert_eq!(
+            regex,
+            Regex::Class(vec![CharRange::Range('a', 'z'), CharRange::Single('A'),]).simplify()
+        );
     }
 
     #[test]
@@ -476,61 +493,64 @@ mod tests {
     #[test]
     fn parse_repetition_count_exact() {
         let regex = parse_string_to_regex("a{3}").unwrap();
-        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::Exact(3)));
+        assert_eq!(
+            regex,
+            Regex::Count(Box::new(Regex::Literal('a')), Count::Exact(3))
+        );
     }
 
     #[test]
     fn parse_repetition_count_range() {
         let regex = parse_string_to_regex("a{3,5}").unwrap();
-        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::Range(3, 5)));
+        assert_eq!(
+            regex,
+            Regex::Count(Box::new(Regex::Literal('a')), Count::Range(3, 5))
+        );
     }
 
     #[test]
     fn parse_repetition_count_at_least() {
         let regex = parse_string_to_regex("a{3,}").unwrap();
-        assert_eq!(regex, Regex::Count(Box::new(Regex::Literal('a')), Count::AtLeast(3)));
+        assert_eq!(
+            regex,
+            Regex::Count(Box::new(Regex::Literal('a')), Count::AtLeast(3))
+        );
     }
 
     #[test]
     fn parse_concatenation() {
         let regex = parse_string_to_regex("ab").unwrap();
-        assert_eq!(regex, Regex::Concat(Box::new(Regex::Literal('a')), Box::new(Regex::Literal('b'))));
+        assert_eq!(
+            regex,
+            Regex::Concat(Box::new(Regex::Literal('a')), Box::new(Regex::Literal('b')))
+        );
     }
 
     #[test]
     fn parse_concatenation_three() {
         let regex = parse_string_to_regex("abc").unwrap();
-        assert_eq!(regex, Regex::Concat(
-            Box::new(Regex::Concat(
-                Box::new(Regex::Literal('a')),
-                Box::new(Regex::Literal('b')),
-            )),
-            Box::new(Regex::Literal('c')),
-        ));
+        assert_eq!(
+            regex,
+            Regex::Concat(
+                Box::new(Regex::Concat(
+                    Box::new(Regex::Literal('a')),
+                    Box::new(Regex::Literal('b')),
+                )),
+                Box::new(Regex::Literal('c')),
+            )
+        );
     }
 
     #[test]
     fn parse_concatenation_complex() {
         let regex = parse_string_to_regex("a(bc)*d[a-z]").unwrap();
 
-        let bc = Regex::Concat(
-            Box::new(Regex::Literal('b')),
-            Box::new(Regex::Literal('c')),
-        );
+        let bc = Regex::Concat(Box::new(Regex::Literal('b')), Box::new(Regex::Literal('c')));
         let star = bc.star();
-        let a_bc_star = Regex::Concat(
-            Box::new(Regex::Literal('a')),
-            Box::new(star),
-        );
-        let a_bc_star_d = Regex::Concat(
-            Box::new(a_bc_star),
-            Box::new(Regex::Literal('d')),
-        );
+        let a_bc_star = Regex::Concat(Box::new(Regex::Literal('a')), Box::new(star));
+        let a_bc_star_d = Regex::Concat(Box::new(a_bc_star), Box::new(Regex::Literal('d')));
         let class = Regex::Class(vec![CharRange::Range('a', 'z')]);
-        let a_bc_star_d_class = Regex::Concat(
-            Box::new(a_bc_star_d),
-            Box::new(class),
-        );
+        let a_bc_star_d_class = Regex::Concat(Box::new(a_bc_star_d), Box::new(class));
 
         assert_eq!(regex, a_bc_star_d_class);
     }
@@ -538,20 +558,26 @@ mod tests {
     #[test]
     fn parse_alternation() {
         let regex = parse_string_to_regex("a|b").unwrap();
-        assert_eq!(regex, Regex::Or(Box::new(Regex::Literal('a')), Box::new(Regex::Literal('b'))));
+        assert_eq!(
+            regex,
+            Regex::Or(Box::new(Regex::Literal('a')), Box::new(Regex::Literal('b')))
+        );
     }
 
     #[test]
     fn parse_alternation_three() {
         let regex = parse_string_to_regex("a|b|c").unwrap();
 
-        assert_eq!(regex, Regex::Or(
-            Box::new(Regex::Or(
-                Box::new(Regex::Literal('a')),
-                Box::new(Regex::Literal('b')),
-            )),
-            Box::new(Regex::Literal('c')),
-        ));
+        assert_eq!(
+            regex,
+            Regex::Or(
+                Box::new(Regex::Or(
+                    Box::new(Regex::Literal('a')),
+                    Box::new(Regex::Literal('b')),
+                )),
+                Box::new(Regex::Literal('c')),
+            )
+        );
     }
 
     #[test]
@@ -559,15 +585,9 @@ mod tests {
         let regex = parse_string_to_regex("a*|(bc)?").unwrap();
 
         let a_star = Regex::Literal('a').star();
-        let bc = Regex::Concat(
-            Box::new(Regex::Literal('b')),
-            Box::new(Regex::Literal('c')),
-        );
+        let bc = Regex::Concat(Box::new(Regex::Literal('b')), Box::new(Regex::Literal('c')));
         let bc_optional = bc.optional();
-        let a_star_or_bc_optional = Regex::Or(
-            Box::new(a_star),
-            Box::new(bc_optional),
-        );
+        let a_star_or_bc_optional = Regex::Or(Box::new(a_star), Box::new(bc_optional));
 
         assert_eq!(regex, a_star_or_bc_optional);
     }
@@ -581,14 +601,9 @@ mod tests {
     #[test]
     fn parse_nested_parentheses() {
         let regex = parse_string_to_regex("((a|b)*c)+").unwrap();
-        let a_or_b_star = Regex::Or(
-            Box::new(Regex::Literal('a')),
-            Box::new(Regex::Literal('b')),
-        ).star();
-        let a_or_b_star_c = Regex::Concat(
-            Box::new(a_or_b_star),
-            Box::new(Regex::Literal('c')),
-        );
+        let a_or_b_star =
+            Regex::Or(Box::new(Regex::Literal('a')), Box::new(Regex::Literal('b'))).star();
+        let a_or_b_star_c = Regex::Concat(Box::new(a_or_b_star), Box::new(Regex::Literal('c')));
         let a_or_b_star_c_plus = a_or_b_star_c.plus();
 
         assert_eq!(regex, a_or_b_star_c_plus);

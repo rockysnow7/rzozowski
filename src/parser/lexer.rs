@@ -1,5 +1,5 @@
-use std::fmt;
 use logos::Logos;
+use std::fmt;
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
 pub enum Token {

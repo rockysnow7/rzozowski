@@ -618,13 +618,16 @@ mod tests {
     #[test]
     fn parse_hyphen() {
         let regex = parse_string_to_regex("a-z").unwrap();
-        assert_eq!(regex, Regex::Concat(
-            Box::new(Regex::Concat(
-                Box::new(Regex::Literal('a')),
-                Box::new(Regex::Literal('-')),
-            )),
-            Box::new(Regex::Literal('z')),
-        ));
+        assert_eq!(
+            regex,
+            Regex::Concat(
+                Box::new(Regex::Concat(
+                    Box::new(Regex::Literal('a')),
+                    Box::new(Regex::Literal('-')),
+                )),
+                Box::new(Regex::Literal('z')),
+            )
+        );
     }
 
     #[test]

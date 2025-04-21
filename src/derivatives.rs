@@ -2,9 +2,8 @@ use crate::parser::parse_string_to_regex;
 use std::fmt::{Debug, Display, Formatter};
 
 pub const CLASS_ESCAPE_CHARS: &[char] = &['[', ']', '-', '\\'];
-pub const NON_CLASS_ESCAPE_CHARS: &[char] = &[
-    '[', ']', '(', ')', '{', '}', '?', '*', '+', '|', '\\', '.',
-];
+pub const NON_CLASS_ESCAPE_CHARS: &[char] =
+    &['[', ']', '(', ')', '{', '}', '?', '*', '+', '|', '\\', '.'];
 
 fn escape_regex_char(c: char, in_class: bool) -> String {
     let to_escape = if in_class {

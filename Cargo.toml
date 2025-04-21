@@ -26,3 +26,6 @@ regex = "1.11.1"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[build-dependencies]
+monk = "0.2.1"

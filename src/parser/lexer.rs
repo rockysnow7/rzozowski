@@ -1,5 +1,5 @@
-use std::fmt;
 use logos::Logos;
+use std::fmt;
 
 #[derive(Logos, Debug, PartialEq, Eq, Clone)]
 pub enum Token {
@@ -46,7 +46,7 @@ impl fmt::Display for Token {
 }
 
 impl Token {
-    pub fn as_char(&self) -> char {
+    pub const fn as_char(&self) -> char {
         match self {
             Self::Literal(c) => *c,
             Self::OpenParen => '(',
@@ -70,6 +70,10 @@ impl Token {
 }
 
 mod tests {
+    // Not quite sure why this triggers here, possibly the include is too "broad"
+    // The code fails to compile without the use statement, yet clippy isn't happy about it being
+    // there.
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

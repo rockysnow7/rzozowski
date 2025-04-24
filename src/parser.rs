@@ -60,6 +60,16 @@ static SPECIAL_CHAR_SEQUENCES: LazyLock<HashMap<char, RegexRepresentation>> = La
                 CharRange::Single('_'),
             ]),
         ),
+        // "\s" => [ \t\n\r]
+        (
+            's',
+            RegexRepresentation::Class(vec![
+                CharRange::Single(' '),
+                CharRange::Single('\t'),
+                CharRange::Single('\n'),
+                CharRange::Single('\r'),
+            ]),
+        ),
     ])
 });
 

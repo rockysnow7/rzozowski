@@ -48,7 +48,7 @@ Install with `cargo add rzozowski` or add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rzozowski = "0.1.3"
+rzozowski = "0.2.0"
 ```
 
 Usage is very simple. *rzozowski* allows you to:
@@ -82,7 +82,7 @@ fn main() {
 - Kleene star (e.g., `a*`)
 - Plus (e.g., `a+`)
 - Optional (e.g., `a?`)
-- Character classes (e.g., `[a-z123]`, `\d`, `\w`)
+- Character classes (e.g., `[a-z123]`, `\d`, `\w`, `\s`)
 - Counts (e.g., `a{3}`, `a{3,}`, or `a{3,5}`)
 - Parentheses (e.g., `(ab)+`)
 
